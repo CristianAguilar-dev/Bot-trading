@@ -30,21 +30,28 @@ from scanner import scan_multiple_cryptos
 STATE_FILE = os.path.join(os.path.dirname(__file__), "trading_state.json")
 
 def start_health_server():
-    """Servidor HTTP ligero para permitir alojamiento gratuito 24/7 en la nube (Render, Railway, Koyeb)."""
+    """Servidor HTTP para servir la Academia de Trading y mantener el bot activo 24/7 en la nube."""
     port = int(os.environ.get("PORT", "8080"))
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+
     class HealthHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
-            html = (
-                "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Trading Bot 24/7</title></head>"
-                "<body style='font-family:sans-serif; text-align:center; padding-top:50px; background:#0f172a; color:#f8fafc;'>"
-                "<h1>🟢 Bot de Trading Pro Operando 24/7 en la Nube</h1>"
-                "<p>Gráficos, Escáner Radar, DCA y Sentimiento de Mercado activos.</p>"
-                "</body></html>"
-            )
-            self.wfile.write(html.encode("utf-8"))
+            if os.path.exists(html_path):
+                with open(html_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                self.wfile.write(content.encode("utf-8"))
+            else:
+                html = (
+                    "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Trading Bot 24/7</title></head>"
+                    "<body style='font-family:sans-serif; text-align:center; padding-top:50px; background:#0f172a; color:#f8fafc;'>"
+                    "<h1>🟢 Bot de Trading Pro Operando 24/7 en la Nube</h1>"
+                    "<p>Academia Web, Gráficos, Escáner Radar, DCA y Sentimiento activos.</p>"
+                    "</body></html>"
+                )
+                self.wfile.write(html.encode("utf-8"))
         def log_message(self, format, *args):
             pass
 
@@ -215,7 +222,7 @@ class TelegramTradingBot:
                 [{"text": "🚀 Iniciar Trading"}, {"text": "⏹️ Pausar Trading"}],
                 [{"text": "🧠 Miedo & Codicia"}, {"text": "☀️ Resumen Diario"}],
                 [{"text": "📜 Historial"}, {"text": "🔄 Reiniciar Bot"}],
-                [{"text": "⚙️ Ajustes"}]
+                [{"text": "⚙️ Ajustes"}, {"text": "🎓 Academia Web"}]
             ],
             "resize_keyboard": True,
             "is_persistent": True
@@ -589,6 +596,22 @@ class TelegramTradingBot:
             reply_markup=self.get_main_keyboard()
         )
 
+    def handle_academia(self, chat_id: int):
+        """Envía el enlace a la Academia Web interactiva."""
+        url = os.environ.get("RENDER_EXTERNAL_URL", "https://bot-trading-593w.onrender.com")
+        msg = (
+            f"🎓 *ACADEMIA DE TRADING & ESTRATEGIAS PRO*\n\n"
+            f"Hemos preparado una **página web completa e interactiva** para aprender a operar con este bot:\n\n"
+            f"• 🕯️ *Velas japonesas y marcos temporales*\n"
+            f"• 📈 *Estrategia EMA 9/21 + Filtro RSI explicada*\n"
+            f"• 🛡️ *Matemáticas del Ratio Riesgo/Beneficio 1:2*\n"
+            f"• 🎯 *Estrategia DCA para ganar en caídas*\n"
+            f"• 🧮 *Calculadora interactiva de Interés Compuesto*\n\n"
+            f"🌐 *Toca el botón abajo para abrir la academia en tu celular:*"
+        )
+        markup = {"inline_keyboard": [[{"text": "🌐 Abrir Academia de Trading 🚀", "url": url}]]}
+        self.send_message(chat_id, msg, reply_markup=markup)
+
     def handle_force_sell(self, chat_id: int):
         if not self.risk_mgr.active_position:
             self.send_message(chat_id, "ℹ️ No hay ninguna posición abierta.")
@@ -785,6 +808,8 @@ class TelegramTradingBot:
                 self.handle_reset_balance(cid)
             elif text in ("⚙️ Ajustes", "/ajustes", "/config"):
                 self.handle_settings(cid)
+            elif text in ("🎓 Academia Web", "/academia", "/aprender", "/guia"):
+                self.handle_academia(cid)
             elif text in ("❓ Ayuda", "/ayuda", "/help"):
                 help_text = (
                     f"📖 *GUÍA COMPLETA DE COMANDOS PRO*\n\n"

@@ -1,0 +1,45 @@
+import os
+from dataclasses import dataclass
+from dotenv import load_dotenv
+
+# Cargar variables del archivo .env si existe
+load_dotenv()
+
+@dataclass
+class BotConfig:
+    bot_mode: str = os.getenv("BOT_MODE", "paper").lower()
+    exchange_id: str = os.getenv("EXCHANGE_ID", "binance").lower()
+    use_testnet: bool = os.getenv("USE_TESTNET", "true").lower() in ("true", "1", "yes")
+    
+    api_key: str = os.getenv("API_KEY", "")
+    api_secret: str = os.getenv("API_SECRET", "")
+    
+    symbol: str = os.getenv("SYMBOL", "BTC/USDT")
+    timeframe: str = os.getenv("TIMEFRAME", "1h")
+    
+    # Parámetros técnicos
+    fast_ema: int = int(os.getenv("FAST_EMA", "9"))
+    slow_ema: int = int(os.getenv("SLOW_EMA", "21"))
+    rsi_period: int = int(os.getenv("RSI_PERIOD", "14"))
+    rsi_buy_threshold: float = float(os.getenv("RSI_BUY_THRESHOLD", "50.0"))
+    rsi_overbought: float = float(os.getenv("RSI_OVERBOUGHT", "70.0"))
+    rsi_oversold: float = float(os.getenv("RSI_OVERSOLD", "30.0"))
+    
+    # Gestión de riesgo
+    take_profit_pct: float = float(os.getenv("TAKE_PROFIT_PCT", "3.0"))
+    stop_loss_pct: float = float(os.getenv("STOP_LOSS_PCT", "1.5"))
+    trailing_stop: bool = os.getenv("TRAILING_STOP", "false").lower() in ("true", "1", "yes")
+    max_position_pct: float = float(os.getenv("MAX_POSITION_PCT", "25.0"))
+    
+    # Simulación
+    initial_balance: float = float(os.getenv("INITIAL_BALANCE", "1000.0"))
+    
+    # Notificaciones Telegram
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
+
+    def is_paper(self) -> bool:
+        return self.bot_mode != "live"
+
+    def has_telegram(self) -> bool:
+        return bool(self.telegram_bot_token and self.telegram_chat_id)

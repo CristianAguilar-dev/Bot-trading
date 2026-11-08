@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: crypto-trading-telegram-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python telegram_bot.py
+    plan: free

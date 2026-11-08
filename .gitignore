@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.env
+trading_state.json

@@ -719,12 +719,13 @@ class TelegramTradingBot:
         url = os.environ.get("RENDER_EXTERNAL_URL", "https://bot-trading-593w.onrender.com")
         msg = (
             f"🎓 *ACADEMIA DE TRADING & ESTRATEGIAS PRO*\n\n"
-            f"Hemos preparado una **página web completa e interactiva** para aprender a operar con este bot:\n\n"
-            f"• 🕯️ *Velas japonesas y marcos temporales*\n"
-            f"• 📈 *Estrategia EMA 9/21 + Filtro RSI explicada*\n"
-            f"• 🛡️ *Matemáticas del Ratio Riesgo/Beneficio 1:2*\n"
-            f"• 🎯 *Estrategia DCA para ganar en caídas*\n"
-            f"• 🧮 *Calculadora interactiva de Interés Compuesto*\n\n"
+            f"Hemos preparado una *plataforma web completa e interactiva* para aprender a operar con este bot como un profesional:\n\n"
+            f"• 📚 *6 Módulos de Formación:* De principiante a cuantitativo.\n"
+            f"• 🧠 *El Cerebro Algorítmico:* EMA 9/21, RSI 14 y EMA 200.\n"
+            f"• 🛡️ *Matemáticas del Ratio 1:2:* Ganar a largo plazo.\n"
+            f"• 🧮 *Simulador Cuantitativo:* Interés compuesto y proyección.\n"
+            f"• 🏆 *Examen y Certificación:* Insignia de Trader Oficial.\n"
+            f"• 📖 *Glosario A-Z:* Diccionario financiero completo.\n\n"
             f"🌐 *Toca el botón abajo para abrir la academia en tu celular:*"
         )
         markup = {"inline_keyboard": [[{"text": "🌐 Abrir Academia de Trading 🚀", "url": url}]]}

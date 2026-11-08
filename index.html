@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Academia de Trading Cripto | Estrategias Pro & Manual del Bot</title>
+  <title>Academia Pro de Cripto Trading | Masterclass Algorítmica & Bot 24/7</title>
+  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -18,471 +20,1145 @@
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', 'sans-serif'],
             display: ['"Outfit"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
             dark: {
-              900: '#060913',
-              800: '#0c1222',
-              700: '#141e36',
-              600: '#1e2c4f',
+              950: '#030712',
+              900: '#080d1a',
+              850: '#0d1527',
+              800: '#111c35',
+              700: '#1b2a4e',
+              600: '#263b6d',
             },
             brand: {
               green: '#10b981',
+              emerald: '#059669',
               cyan: '#06b6d4',
+              blue: '#3b82f6',
               purple: '#8b5cf6',
               amber: '#f59e0b',
+              rose: '#f43f5e',
             }
           }
         }
       }
     }
   </script>
+  
   <style>
-    body { background-color: #060913; color: #f8fafc; }
-    .glass { background: rgba(12, 18, 34, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .glass-card { background: rgba(20, 30, 54, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
+    body { background-color: #030712; color: #f8fafc; }
+    .glass-nav { background: rgba(8, 13, 26, 0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card { background: rgba(13, 21, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.06); }
+    .glass-card:hover { border-color: rgba(6, 182, 212, 0.3); }
+    .glass-panel { background: rgba(17, 28, 53, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
     .gradient-text { background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .glow-green { box-shadow: 0 0 30px rgba(16, 185, 129, 0.2); }
+    .gradient-gold { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .glow-cyan { box-shadow: 0 0 35px rgba(6, 182, 212, 0.15); }
+    .glow-green { box-shadow: 0 0 35px rgba(16, 185, 129, 0.15); }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: #1b2a4e; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
   </style>
 </head>
-<body class="font-sans antialiased selection:bg-brand-cyan selection:text-dark-900">
+<body class="font-sans antialiased selection:bg-brand-cyan selection:text-dark-950">
 
-  <!-- NAVBAR -->
-  <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">🤖</span>
-        <span class="font-display font-bold text-lg tracking-wide text-white">Academia <span class="gradient-text">CriptoBot</span></span>
+  <!-- TOP TICKER BAR -->
+  <div class="bg-dark-900 border-b border-white/5 py-1.5 px-4 text-xs font-mono text-gray-400 overflow-x-auto whitespace-nowrap">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-6">
+      <div class="flex items-center gap-6">
+        <span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          NUBE 24/7 ACTIVA
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="text-white font-semibold">BTC/USDT:</span>
+          <span id="ticker-btc" class="text-emerald-400 font-bold">$74,530</span>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="text-white font-semibold">ETH/USDT:</span>
+          <span id="ticker-eth" class="text-cyan-400 font-bold">$2,840</span>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="text-white font-semibold">SOL/USDT:</span>
+          <span id="ticker-sol" class="text-purple-400 font-bold">$188.50</span>
+        </span>
       </div>
-      <nav class="hidden md:flex items-center gap-6 text-sm text-gray-300">
-        <a href="#fundamentos" class="hover:text-brand-green transition">Fundamentos</a>
-        <a href="#estrategia" class="hover:text-brand-cyan transition">Estrategia EMA+RSI</a>
-        <a href="#riesgo" class="hover:text-brand-purple transition">Gestión de Riesgo</a>
-        <a href="#dca" class="hover:text-brand-amber transition">Modo DCA</a>
-        <a href="#calculadora" class="hover:text-brand-green transition">Calculadora</a>
-        <a href="#manual" class="hover:text-brand-cyan transition">Manual Bot</a>
-      </nav>
-      <a href="#manual" class="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-dark-900 font-bold px-4 py-2 rounded-xl text-xs sm:text-sm transition transform hover:scale-105 shadow-lg shadow-emerald-500/20">
-        Ir al Bot 📱
+      <div class="hidden sm:flex items-center gap-4 text-gray-400">
+        <span>Estrategia: <strong class="text-emerald-400">EMA 9/21 + RSI 14 + EMA 200</strong></span>
+        <span>•</span>
+        <span>Modo: <strong class="text-cyan-400">TradingJammer Pro</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVBAR PRINCIPAL -->
+  <header class="sticky top-0 z-50 glass-nav">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
+      
+      <!-- Logo y Título -->
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-cyan-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition transform">
+          <div class="w-full h-full bg-dark-950 rounded-[10px] flex items-center justify-center font-display font-black text-xl text-white">
+            TJ
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display font-black text-lg tracking-wide text-white">TradingJammer</span>
+            <span class="bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Academia</span>
+          </div>
+          <p class="text-[11px] text-gray-400">Masterclass Cripto Cuantitativa</p>
+        </div>
       </a>
+
+      <!-- Menú de Navegación -->
+      <nav class="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-300">
+        <a href="#modulos" class="hover:text-brand-green transition flex items-center gap-1">
+          <span>📚</span> Módulos
+        </a>
+        <a href="#estrategia" class="hover:text-brand-cyan transition flex items-center gap-1">
+          <span>🧠</span> El Cerebro Algorítmico
+        </a>
+        <a href="#riesgo" class="hover:text-brand-purple transition flex items-center gap-1">
+          <span>🛡️</span> Gestión Matemática
+        </a>
+        <a href="#simulador" class="hover:text-brand-green transition flex items-center gap-1">
+          <span>🧮</span> Simulador
+        </a>
+        <a href="#quiz" class="hover:text-brand-amber transition flex items-center gap-1">
+          <span>🏆</span> Certificación
+        </a>
+        <a href="#manual" class="hover:text-cyan-400 transition flex items-center gap-1">
+          <span>📱</span> Manual Bot
+        </a>
+      </nav>
+
+      <!-- Botón Call To Action -->
+      <div class="flex items-center gap-3">
+        <a href="https://t.me/TradingJammerBot" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600 hover:from-emerald-400 hover:via-cyan-400 hover:to-blue-500 text-dark-950 font-bold px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm transition transform hover:scale-105 shadow-lg shadow-cyan-500/25">
+          <span>Abrir Bot en Telegram</span>
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Barra de Progreso del Estudiante -->
+    <div class="w-full bg-dark-950 h-1.5 relative overflow-hidden">
+      <div id="course-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-600 transition-all duration-500" style="width: 15%;"></div>
     </div>
   </header>
 
   <!-- HERO SECTION -->
-  <section class="pt-32 pb-20 px-4 relative overflow-hidden">
-    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-cyan/15 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute top-1/3 left-1/3 -translate-x-1/2 w-80 h-80 bg-brand-green/15 rounded-full blur-3xl pointer-events-none"></div>
+  <section class="pt-20 pb-16 px-4 relative overflow-hidden">
+    <!-- Glows decorativos de fondo -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-b from-cyan-500/10 via-emerald-500/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute top-1/3 right-10 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div class="max-w-4xl mx-auto text-center relative z-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-6">
-        <span class="animate-pulse">●</span> Guía y Estrategias Oficiales 2026
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+      
+      <!-- Badge Superior -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold mb-8 glow-cyan">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        Programa Oficial de Formación para Inversores & Operadores del Bot
       </div>
-      <h1 class="font-display font-extrabold text-4xl sm:text-6xl text-white tracking-tight leading-tight mb-6">
-        Aprende a Operar como un <span class="gradient-text">Trader Profesional</span> con tu Bot
+
+      <!-- Título Principal -->
+      <h1 class="font-display font-black text-4xl sm:text-6xl lg:text-7xl text-white tracking-tight leading-[1.1] mb-6">
+        Domina el Arte del <br class="hidden sm:inline">
+        <span class="gradient-text">Trading Cuantitativo</span> & Gana 24/7
       </h1>
-      <p class="text-gray-400 text-base sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-        Domina el análisis técnico de Medias Móviles, el oscilador RSI, la gestión de riesgo matemática y cómo sacarle el máximo provecho a tu robot de Telegram.
+
+      <!-- Subtítulo -->
+      <p class="text-gray-300 text-base sm:text-xl max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+        Aprende desde los fundamentos esenciales hasta las estrategias matemáticas que utiliza tu robot en Telegram: cruce de <strong class="text-cyan-400">EMAs</strong>, oscilador <strong class="text-purple-400">RSI</strong>, filtro institucional <strong class="text-amber-400">EMA 200</strong>, volumen de ballenas y gestión matemática de riesgo con <strong class="text-emerald-400">Break-Even</strong>.
       </p>
-      <div class="flex flex-wrap items-center justify-center gap-4">
-        <a href="#estrategia" class="bg-white text-dark-900 font-bold px-6 py-3 rounded-xl text-sm hover:bg-gray-200 transition shadow-lg">
-          📘 Descubrir la Estrategia
+
+      <!-- Botones de Acción -->
+      <div class="flex flex-wrap items-center justify-center gap-4 mb-16">
+        <a href="#modulos" class="bg-white hover:bg-gray-100 text-dark-950 font-extrabold px-7 py-3.5 rounded-2xl text-sm transition transform hover:scale-105 shadow-xl flex items-center gap-2">
+          <span>🚀 Empezar la Masterclass</span>
         </a>
-        <a href="#calculadora" class="glass text-white font-semibold px-6 py-3 rounded-xl text-sm hover:border-brand-cyan/50 transition">
-          🧮 Probar Calculadora de Ganancias
+        <a href="#simulador" class="glass-card hover:border-cyan-400/50 text-white font-semibold px-7 py-3.5 rounded-2xl text-sm transition flex items-center gap-2">
+          <span>🧮 Simulador de Ganancias</span>
+        </a>
+        <a href="#quiz" class="glass-card hover:border-purple-400/50 text-purple-300 font-semibold px-7 py-3.5 rounded-2xl text-sm transition flex items-center gap-2">
+          <span>🏆 Obtener Certificado</span>
         </a>
       </div>
+
+      <!-- Estadísticas Rápidas del Bot -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <div class="glass-card p-5 rounded-2xl text-left border-l-4 border-l-emerald-400">
+          <div class="text-xs text-gray-400 uppercase font-semibold">Ratio Riesgo/Beneficio</div>
+          <div class="text-2xl font-black font-display text-white mt-1">1 : 2.0</div>
+          <div class="text-[11px] text-emerald-400 mt-1">Ganancia duplica pérdida</div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl text-left border-l-4 border-l-cyan-400">
+          <div class="text-xs text-gray-400 uppercase font-semibold">Salida Libre de Riesgo</div>
+          <div class="text-2xl font-black font-display text-white mt-1">Break-Even</div>
+          <div class="text-11px text-cyan-400 mt-1">Protección al +1.2%</div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl text-left border-l-4 border-l-purple-400">
+          <div class="text-xs text-gray-400 uppercase font-semibold">Filtro de Tendencia Macro</div>
+          <div class="text-2xl font-black font-display text-white mt-1">EMA 200</div>
+          <div class="text-[11px] text-purple-400 mt-1">Solo opera a favor de ola</div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl text-left border-l-4 border-l-amber-400">
+          <div class="text-xs text-gray-400 uppercase font-semibold">Operatividad en la Nube</div>
+          <div class="text-2xl font-black font-display text-white mt-1">24h / 7d</div>
+          <div class="text-[11px] text-amber-400 mt-1">Independiente de la PC</div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- SECCIÓN 1: FUNDAMENTOS BÁSICOS -->
-  <section id="fundamentos" class="py-16 px-4 border-t border-white/5">
-    <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-12">
-        <h2 class="font-display font-bold text-3xl text-white mb-3">1. Fundamentos Clave del Trading Cripto</h2>
-        <p class="text-gray-400 max-w-xl mx-auto text-sm sm:text-base">Los conceptos esenciales que todo trader exitoso debe entender antes de ver los gráficos.</p>
-      </div>
-
-      <div class="grid md:grid-cols-3 gap-6">
-        <!-- Tarjeta 1 -->
-        <div class="glass-card rounded-2xl p-6 hover:border-brand-green/40 transition">
-          <div class="text-3xl mb-4">🕯️</div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Velas Japonesas (Candlesticks)</h3>
-          <p class="text-gray-400 text-sm leading-relaxed mb-4">
-            Cada vela representa lo que ocurrió en un período de tiempo (ej. 1 hora).
-          </p>
-          <ul class="text-xs text-gray-300 space-y-2">
-            <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">Verde:</span> El precio subió (Cierre > Apertura).</li>
-            <li class="flex items-center gap-2"><span class="text-rose-400 font-bold">Roja:</span> El precio bajó (Cierre < Apertura).</li>
-            <li class="flex items-center gap-2"><span class="text-amber-400 font-bold">Mechas:</span> El máximo y mínimo que tocó el precio.</li>
-          </ul>
-        </div>
-
-        <!-- Tarjeta 2 -->
-        <div class="glass-card rounded-2xl p-6 hover:border-brand-cyan/40 transition">
-          <div class="text-3xl mb-4">⏱️</div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Temporalidades (Timeframes)</h3>
-          <p class="text-gray-400 text-sm leading-relaxed mb-4">
-            El marco temporal define la velocidad y duración de las operaciones del bot:
-          </p>
-          <ul class="text-xs text-gray-300 space-y-2">
-            <li><strong class="text-cyan-400">15 Minutos (15m):</strong> Operaciones rápidas en el mismo día (Day Trading).</li>
-            <li><strong class="text-cyan-400">1 Hora (1h - Recomendado):</strong> Equilibrio perfecto entre precisión y menos señales falsas.</li>
-            <li><strong class="text-cyan-400">4 Horas (4h):</strong> Tendencias largas y de menor estrés (Swing Trading).</li>
-          </ul>
-        </div>
-
-        <!-- Tarjeta 3 -->
-        <div class="glass-card rounded-2xl p-6 hover:border-brand-purple/40 transition">
-          <div class="text-3xl mb-4">🌊</div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Tendencias y Ruido</h3>
-          <p class="text-gray-400 text-sm leading-relaxed mb-4">
-            El mercado se mueve en 3 direcciones: Alcista, Bajista o Lateral (Rango).
-          </p>
-          <div class="bg-dark-900/60 p-3 rounded-xl border border-white/5 text-xs text-emerald-400">
-            💡 <strong>Regla de oro:</strong> "La tendencia es tu amiga". El bot nunca intenta adivinar el suelo, sino montarse en la ola cuando la tendencia ya comenzó.
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECCIÓN 2: LA ESTRATEGIA DEL BOT (EMA + RSI) -->
-  <section id="estrategia" class="py-16 px-4 bg-dark-800/40 border-t border-white/5">
-    <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-12">
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-cyan">El Cerebro del Robot</span>
-        <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-white mt-1 mb-3">La Estrategia: Cruce de EMA 9/21 + Filtro RSI</h2>
-        <p class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
-          Esta estrategia combina dos de los indicadores matemáticos más fiables de Wall Street adaptados a la volatilidad de las criptomonedas.
-        </p>
-      </div>
-
-      <!-- Explicación Visual de Indicadores -->
-      <div class="grid md:grid-cols-2 gap-8 mb-12">
-        <div class="glass-card rounded-2xl p-6 border-l-4 border-l-cyan-400">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-display font-bold text-xl text-white">1. Medias Móviles Exponenciales (EMA)</h3>
-            <span class="text-xs font-semibold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400">Dirección</span>
-          </div>
-          <p class="text-gray-300 text-sm mb-4 leading-relaxed">
-            Las EMAs suavizan el precio dándole más importancia a las velas recientes:
-          </p>
-          <div class="space-y-3 text-xs sm:text-sm">
-            <div class="flex items-center gap-3 bg-dark-900/50 p-3 rounded-xl">
-              <span class="w-3 h-3 rounded-full bg-cyan-400 flex-shrink-0"></span>
-              <div><strong class="text-cyan-400">EMA 9 (Rápida - Azul):</strong> Sigue de cerca el precio actual.</div>
-            </div>
-            <div class="flex items-center gap-3 bg-dark-900/50 p-3 rounded-xl">
-              <span class="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0"></span>
-              <div><strong class="text-amber-400">EMA 21 (Lenta - Naranja):</strong> Representa el promedio más sólido.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="glass-card rounded-2xl p-6 border-l-4 border-l-purple-400">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-display font-bold text-xl text-white">2. Índice de Fuerza Relativa (RSI 14)</h3>
-            <span class="text-xs font-semibold px-2.5 py-1 rounded bg-purple-500/20 text-purple-400">Velocímetro</span>
-          </div>
-          <p class="text-gray-300 text-sm mb-4 leading-relaxed">
-            Un oscilador de 0 a 100 que mide la fuerza con la que compran o venden los inversores:
-          </p>
-          <div class="space-y-2 text-xs sm:text-sm">
-            <div class="bg-dark-900/50 p-2.5 rounded-lg text-emerald-400">
-              <strong>RSI < 30 (Sobreventa):</strong> Precio muy castigado. Rebote inminente.
-            </div>
-            <div class="bg-dark-900/50 p-2.5 rounded-lg text-cyan-300">
-              <strong>RSI entre 50 y 70 (Impulso Sano):</strong> Los compradores tienen el control. Zona ideal de compra.
-            </div>
-            <div class="bg-dark-900/50 p-2.5 rounded-lg text-rose-400">
-              <strong>RSI > 70 (Sobrecompra Extrema):</strong> Precio inflado. Peligro de caída inminente. El bot NO compra aquí.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Reglas Exactas de Ejecución -->
-      <div class="glass rounded-2xl p-8 border border-white/10 glow-green">
-        <h3 class="font-display font-bold text-2xl text-white mb-6 text-center">🎯 Cómo el Bot Toma Decisiones</h3>
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-5">
-            <div class="flex items-center gap-2 text-emerald-400 font-bold text-lg mb-2">
-              <span>🟢</span> CONDICIÓN DE COMPRA (BUY)
-            </div>
-            <ul class="text-sm text-gray-300 space-y-2">
-              <li class="flex items-start gap-2">✓ <strong>Cruce Dorado:</strong> La EMA 9 cruza hacia arriba a la EMA 21.</li>
-              <li class="flex items-start gap-2">✓ <strong>Filtro RSI:</strong> El RSI está por encima de 50 (fuerza compradora) pero por debajo de 70 (sin sobrecompra).</li>
-              <li class="flex items-start gap-2">✓ <strong>O Rebote:</strong> El RSI sale de zona de sobreventa (< 30) con tendencia favorable.</li>
-            </ul>
-          </div>
-
-          <div class="bg-rose-950/30 border border-rose-500/30 rounded-xl p-5">
-            <div class="flex items-center gap-2 text-rose-400 font-bold text-lg mb-2">
-              <span>🔴</span> CONDICIÓN DE SALIDA / VENTA (SELL)
-            </div>
-            <ul class="text-sm text-gray-300 space-y-2">
-              <li class="flex items-start gap-2">✓ <strong>Cruce Bajista:</strong> La EMA 9 cruza hacia abajo a la EMA 21.</li>
-              <li class="flex items-start gap-2">✓ <strong>Agotamiento:</strong> El RSI supera 70 (toma de ganancias por sobrecompra).</li>
-              <li class="flex items-start gap-2">✓ <strong>Escudo de Protección:</strong> Se activa el Take-Profit (+3%) o Stop-Loss (-1.5%).</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECCIÓN 3: GESTIÓN DE RIESGO Y MATEMÁTICAS DEL ÉXITO -->
-  <section id="riesgo" class="py-16 px-4 border-t border-white/5">
-    <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-12">
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-purple">El Secreto de la Consistencia</span>
-        <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-white mt-1 mb-3">3. La Matemática del Trading: Por Qué Ganarás a Largo Plazo</h2>
-        <p class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
-          Los principiantes se enfocan en acertar el 100% de las veces (lo cual es imposible). Los profesionales se enfocan en que sus ganancias sean más grandes que sus pérdidas.
-        </p>
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-8 items-center mb-10">
+  <!-- SECCIÓN: RUTA DE APRENDIZAJE / MÓDULOS DEL CURSO -->
+  <section id="modulos" class="py-16 px-4 border-t border-white/5 bg-dark-900/50">
+    <div class="max-w-6xl mx-auto">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
         <div>
-          <h3 class="font-display font-bold text-2xl text-white mb-4">El Ratio Riesgo/Beneficio 1:2</h3>
-          <p class="text-gray-300 text-sm leading-relaxed mb-4">
-            Tu bot tiene programado de fábrica:
-          </p>
-          <div class="space-y-3 mb-6">
-            <div class="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl">
-              <span class="text-emerald-400 font-bold">🎯 Take-Profit (Ganancia Objetivo):</span>
-              <span class="text-emerald-400 font-extrabold text-lg">+3.0%</span>
-            </div>
-            <div class="flex justify-between items-center bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl">
-              <span class="text-rose-400 font-bold">🛡️ Stop-Loss (Pérdida Máxima):</span>
-              <span class="text-rose-400 font-extrabold text-lg">-1.5%</span>
-            </div>
-          </div>
-          <p class="text-gray-400 text-xs sm:text-sm leading-relaxed">
-            Esto significa que **cada operación ganada compensa 2 operaciones perdidas**. Incluso si el bot solo acierta el 40% de las veces, ¡tu cuenta seguirá creciendo matemáticamente en el tiempo!
-          </p>
+          <span class="text-xs font-bold uppercase tracking-wider text-brand-cyan">Currículum Académico 2026</span>
+          <h2 class="font-display font-black text-3xl sm:text-4xl text-white mt-1">Los 6 Módulos de Maestría</h2>
+          <p class="text-gray-400 text-sm mt-2 max-w-xl">Avanza paso a paso por los temas. Marca cada módulo como completado para desbloquear tu Certificado de Operador Oficial.</p>
         </div>
-
-        <!-- Tabla Ilustrativa -->
-        <div class="glass-card rounded-2xl p-6">
-          <h4 class="font-bold text-white text-sm mb-3">Simulación de 10 Operaciones:</h4>
-          <div class="space-y-2 text-xs">
-            <div class="flex justify-between p-2 rounded bg-dark-900/60 text-emerald-400">
-              <span>4 Operaciones Ganadas (+3% c/u):</span>
-              <span class="font-bold">+12.0%</span>
-            </div>
-            <div class="flex justify-between p-2 rounded bg-dark-900/60 text-rose-400">
-              <span>6 Operaciones Perdidas (-1.5% c/u):</span>
-              <span class="font-bold">-9.0%</span>
-            </div>
-            <div class="flex justify-between p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-sm">
-              <span>Resultado Neto Final:</span>
-              <span class="text-base font-extrabold">+3.0% de Ganancia Limpia</span>
-            </div>
-          </div>
-          <p class="text-[11px] text-gray-500 mt-3 text-center">
-            *Aún perdiendo más veces de las que ganas, eres rentable gracias al ratio 1:2.
-          </p>
+        <div class="mt-4 md:mt-0 flex items-center gap-3 glass-card px-4 py-2.5 rounded-xl text-xs">
+          <span class="text-gray-400">Tu Progreso:</span>
+          <span id="progress-percentage-text" class="text-emerald-400 font-extrabold text-sm">15%</span>
+          <span class="text-gray-500">|</span>
+          <span id="modules-completed-text" class="text-gray-300 font-medium">1 de 6 Módulos</span>
         </div>
       </div>
+
+      <!-- Grid de Módulos -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Módulo 1 -->
+        <div class="glass-card rounded-2xl p-6 relative flex flex-col justify-between hover:border-emerald-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">MÓDULO 1</span>
+              <span class="text-xs text-gray-500">10 min • Básico</span>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white mb-2">Anatomía del Mercado & Psicología</h3>
+            <p class="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4">
+              Cómo se forman los precios de Bitcoin, velas japonesas, lectura de temporalidades y cómo vencer el FOMO y el pánico que destruyen al 90% de principiantes.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1.5 mb-6">
+              <li class="flex items-center gap-1.5">✓ Anatomía de una vela (Cuerpo y Mechas)</li>
+              <li class="flex items-center gap-1.5">✓ Temporalidades: 15m (Scalping) vs 1h (Pro)</li>
+              <li class="flex items-center gap-1.5">✓ El ciclo de las emociones en el mercado</li>
+            </ul>
+          </div>
+          <button onclick="toggleModuleCheck(1)" id="btn-mod-1" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-dark-850 hover:bg-dark-800 text-gray-300 border border-white/10 transition flex items-center justify-center gap-2">
+            <span>Marcar como Leído</span>
+          </button>
+        </div>
+
+        <!-- Módulo 2 -->
+        <div class="glass-card rounded-2xl p-6 relative flex flex-col justify-between hover:border-cyan-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">MÓDULO 2</span>
+              <span class="text-xs text-gray-500">15 min • Intermedio</span>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white mb-2">Medias Móviles EMA 9, 21 y 200</h3>
+            <p class="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4">
+              La base matemática del bot: cómo las medias móviles exponenciales filtran el ruido del mercado y confirman tendencias institucionales de alta probabilidad.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1.5 mb-6">
+              <li class="flex items-center gap-1.5">✓ EMA 9 (Rápida) vs EMA 21 (Lenta)</li>
+              <li class="flex items-center gap-1.5">✓ El Cruce Dorado (Golden Cross) de compra</li>
+              <li class="flex items-center gap-1.5">✓ La EMA 200 como muralla institucional macro</li>
+            </ul>
+          </div>
+          <button onclick="toggleModuleCheck(2)" id="btn-mod-2" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-dark-850 hover:bg-dark-800 text-gray-300 border border-white/10 transition flex items-center justify-center gap-2">
+            <span>Marcar como Leído</span>
+          </button>
+        </div>
+
+        <!-- Módulo 3 -->
+        <div class="glass-card rounded-2xl p-6 relative flex flex-col justify-between hover:border-purple-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">MÓDULO 3</span>
+              <span class="text-xs text-gray-500">12 min • Intermedio</span>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white mb-2">El Oscilador RSI & Volumen Ballenas</h3>
+            <p class="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4">
+              Aprende a medir el "velocímetro" del mercado: zonas de sobreventa (<30), zona de impulso comprador (50-70) y confirmación de grandes compras institucionales.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1.5 mb-6">
+              <li class="flex items-center gap-1.5">✓ El rango dorado de compra del bot (RSI 50-70)</li>
+              <li class="flex items-center gap-1.5">✓ Trampas de sobrecompra (>70): por qué no comprar</li>
+              <li class="flex items-center gap-1.5">✓ Detección de picos de volumen de ballenas</li>
+            </ul>
+          </div>
+          <button onclick="toggleModuleCheck(3)" id="btn-mod-3" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-dark-850 hover:bg-dark-800 text-gray-300 border border-white/10 transition flex items-center justify-center gap-2">
+            <span>Marcar como Leído</span>
+          </button>
+        </div>
+
+        <!-- Módulo 4 -->
+        <div class="glass-card rounded-2xl p-6 relative flex flex-col justify-between hover:border-amber-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">MÓDULO 4</span>
+              <span class="text-xs text-gray-500">15 min • Avanzado</span>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white mb-2">Gestión de Riesgo & Break-Even</h3>
+            <p class="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4">
+              El secreto para ser rentable sin necesidad de acertar el 100%: Ratio 1:2, blindaje de capital con Stop-Loss en precio de entrada y tomas parciales TP1/TP2.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1.5 mb-6">
+              <li class="flex items-center gap-1.5">✓ Por qué un 40% de aciertos genera dinero neto</li>
+              <li class="flex items-center gap-1.5">✓ Break-Even automático: Operaciones a riesgo 0</li>
+              <li class="flex items-center gap-1.5">✓ Salida escalonada (TP1 +2% y TP2 +6%)</li>
+            </ul>
+          </div>
+          <button onclick="toggleModuleCheck(4)" id="btn-mod-4" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-dark-850 hover:bg-dark-800 text-gray-300 border border-white/10 transition flex items-center justify-center gap-2">
+            <span>Marcar como Leído</span>
+          </button>
+        </div>
+
+        <!-- Módulo 5 -->
+        <div class="glass-card rounded-2xl p-6 relative flex flex-col justify-between hover:border-rose-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">MÓDULO 5</span>
+              <span class="text-xs text-gray-500">10 min • Avanzado</span>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white mb-2">Estrategia DCA & Anti-Revancha</h3>
+            <p class="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4">
+              Cómo convertir correcciones del mercado en oportunidades mediante recompras calculadas, y el mecanismo de enfriamiento mental de 30 minutos tras una pérdida.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1.5 mb-6">
+              <li class="flex items-center gap-1.5">✓ Dollar-Cost Averaging (DCA) matemático</li>
+              <li class="flex items-center gap-1.5">✓ Promediado a la baja para ganar en el rebote</li>
+              <li class="flex items-center gap-1.5">✓ Pausa de 30 min (Cool-down) para proteger saldo</li>
+            </ul>
+          </div>
+          <button onclick="toggleModuleCheck(5)" id="btn-mod-5" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-dark-850 hover:bg-dark-800 text-gray-300 border border-white/10 transition flex items-center justify-center gap-2">
+            <span>Marcar como Leído</span>
+          </button>
+        </div>
+
+        <!-- Módulo 6 -->
+        <div class="glass-card rounded-2xl p-6 relative flex flex-col justify-between hover:border-blue-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">MÓDULO 6</span>
+              <span class="text-xs text-gray-500">8 min • Práctico</span>
+            </div>
+            <h3 class="font-display font-bold text-xl text-white mb-2">Operación del Bot desde el Móvil</h3>
+            <p class="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4">
+              Guía táctica de los 12 botones del teclado de Telegram: escaneo radar de 8 criptomonedas, solicitud de fotos HD de velas japonesas y control autónomo.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1.5 mb-6">
+              <li class="flex items-center gap-1.5">✓ Teclado táctil completo en Telegram</li>
+              <li class="flex items-center gap-1.5">✓ Cómo interpretar los gráficos generados</li>
+              <li class="flex items-center gap-1.5">✓ Cómo funciona la nube 24/7 sin tu PC</li>
+            </ul>
+          </div>
+          <button onclick="toggleModuleCheck(6)" id="btn-mod-6" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-dark-850 hover:bg-dark-800 text-gray-300 border border-white/10 transition flex items-center justify-center gap-2">
+            <span>Marcar como Leído</span>
+          </button>
+        </div>
+
+      </div>
+
     </div>
   </section>
 
-  <!-- SECCIÓN 4: ESTRATEGIA DCA -->
-  <section id="dca" class="py-16 px-4 bg-dark-800/40 border-t border-white/5">
-    <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-12">
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-amber">Función Avanzada</span>
-        <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-white mt-1 mb-3">4. Estrategia DCA (Compras Escalonadas)</h2>
+  <!-- SECCIÓN PROFUNDA: EL CEREBRO DEL BOT (ANÁLISIS TÉCNICO INTERACTIVO) -->
+  <section id="estrategia" class="py-20 px-4 border-t border-white/5 relative">
+    <div class="max-w-6xl mx-auto">
+      
+      <div class="text-center mb-16">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-emerald">Arquitectura Cuantitativa</span>
+        <h2 class="font-display font-black text-3xl sm:text-5xl text-white mt-1 mb-4">
+          Las 5 Capas de Confirmación del Algoritmo
+        </h2>
         <p class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
-          ¿Cómo transformar una caída temporal del mercado en una ganancia rápida?
+          El bot no "adivina" el futuro. Ejecuta un estricto embudo matemático de 5 filtros antes de arriesgar un solo dólar en el mercado.
         </p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-6 mb-8">
-        <div class="glass-card rounded-2xl p-6">
-          <div class="text-2xl mb-2">1️⃣ Entrada Inicial</div>
-          <p class="text-gray-300 text-xs leading-relaxed">
-            El bot compra Bitcoin a <strong>$75,000</strong> con el 50% del monto asignado.
+      <!-- El Embudo Cuantitativo (5 Pasos) -->
+      <div class="space-y-6 max-w-4xl mx-auto mb-16">
+        
+        <!-- Capa 1: Filtro Macro EMA 200 -->
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl border-l-8 border-l-purple-500 relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 font-display font-black text-lg flex items-center justify-center">1</span>
+              <div>
+                <h3 class="font-display font-bold text-xl text-white">Filtro de Tendencia Macro: EMA 200</h3>
+                <span class="text-xs text-purple-300 font-mono">Regla de Oro Institucional</span>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-bold">Dirección General</span>
+          </div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            La Media Móvil Exponencial de 200 periodos separa los mercados alcistas de los bajistas.
+          </p>
+          <div class="grid sm:grid-cols-2 gap-4 text-xs font-mono">
+            <div class="bg-dark-950/70 p-3.5 rounded-xl border border-emerald-500/30 text-emerald-300">
+              <strong class="text-white block mb-1">🌊 Precio > EMA 200 (Permitido Comprar):</strong>
+              El mercado está en marea alcista. El bot tiene luz verde para buscar compras con cruces de medias.
+            </div>
+            <div class="bg-dark-950/70 p-3.5 rounded-xl border border-rose-500/30 text-rose-300">
+              <strong class="text-white block mb-1">🐻 Precio < EMA 200 (Compras Bloqueadas):</strong>
+              El mercado está en tendencia bajista. El bot ignora señales falsas y no compra, protegiendo tu capital.
+            </div>
+          </div>
+        </div>
+
+        <!-- Capa 2: Cruce de EMA 9 y EMA 21 -->
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl border-l-8 border-l-cyan-500 relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 font-display font-black text-lg flex items-center justify-center">2</span>
+              <div>
+                <h3 class="font-display font-bold text-xl text-white">El Disparador de Entrada: Cruce de EMA 9 / 21</h3>
+                <span class="text-xs text-cyan-300 font-mono">Momento Exacto del Giro</span>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-bold">Timing de Entrada</span>
+          </div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            Cuando la media rápida (EMA 9, azul) cruza hacia arriba a la media lenta (EMA 21, naranja), se confirma un impulso acelerado de compradores recién entrantes.
+          </p>
+          <div class="bg-dark-950/80 p-4 rounded-xl border border-white/5 font-mono text-xs text-gray-300 flex items-center justify-between flex-wrap gap-2">
+            <span>🔹 Cruce Alcista: <strong class="text-cyan-400">EMA 9 cruza EMA 21 hacia arriba</strong></span>
+            <span class="text-emerald-400 font-bold">➔ Genera Señal "BUY CANDIDATE"</span>
+          </div>
+        </div>
+
+        <!-- Capa 3: Filtro de Fuerza RSI 14 -->
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl border-l-8 border-l-emerald-500 relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 font-display font-black text-lg flex items-center justify-center">3</span>
+              <div>
+                <h3 class="font-display font-bold text-xl text-white">Filtro Antitrampas: RSI 14 (50 a 70)</h3>
+                <span class="text-xs text-emerald-300 font-mono">Confirmación de Gasolina</span>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold">Fuerza Real</span>
+          </div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            Muchos cruces de medias fallan porque no hay fuerza real. El bot exige que el oscilador RSI esté por encima de 50 (los toros tienen el control) pero debajo de 70 (para no comprar en la cima inflada).
+          </p>
+          <!-- Visualizador Gráfico de RSI -->
+          <div class="w-full bg-dark-950 p-4 rounded-xl border border-white/5">
+            <div class="flex justify-between text-[11px] font-mono text-gray-400 mb-2">
+              <span class="text-rose-400 font-bold">0 (Sobreventa)</span>
+              <span class="text-emerald-400 font-bold">50 (Neutral / Impulso)</span>
+              <span class="text-amber-400 font-bold">70 (Sobrecompra)</span>
+              <span class="text-rose-400 font-bold">100</span>
+            </div>
+            <div class="h-5 w-full bg-dark-900 rounded-lg overflow-hidden flex">
+              <div class="w-[30%] bg-rose-500/20 flex items-center justify-center text-[10px] text-rose-300 font-bold">Rebote Potencial</div>
+              <div class="w-[20%] bg-dark-800"></div>
+              <div class="w-[20%] bg-emerald-500/40 flex items-center justify-center text-[10px] text-emerald-200 font-bold">ZONA DE COMPRA DEL BOT ✅</div>
+              <div class="w-[30%] bg-amber-500/30 flex items-center justify-center text-[10px] text-amber-200 font-bold">PELIGRO DE CAÍDA ⚠️</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Capa 4: Inyección de Volumen Ballenas -->
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl border-l-8 border-l-amber-500 relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 font-display font-black text-lg flex items-center justify-center">4</span>
+              <div>
+                <h3 class="font-display font-bold text-xl text-white">Confirmación Institucional: Volumen de Ballenas</h3>
+                <span class="text-xs text-amber-300 font-mono">Dinero Inteligente</span>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">Respaldo Institucional</span>
+          </div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-2">
+            El algoritmo calcula la media móvil del volumen de las últimas 20 velas. Si el volumen de la vela actual supera el promedio, significa que no son pequeños inversores minoristas, sino instituciones o "ballenas" empujando la orden.
           </p>
         </div>
-        <div class="glass-card rounded-2xl p-6 border border-amber-500/30">
-          <div class="text-2xl mb-2">2️⃣ Caída & Recompra</div>
-          <p class="text-gray-300 text-xs leading-relaxed">
-            Bitcoin retrocede a <strong>$73,500</strong> (-2%). El bot hace una recompra automática, bajando tu precio promedio a <strong>$74,250</strong>.
+
+        <!-- Capa 5: Salida con Riesgo Cero (Break-Even & TP Escalonado) -->
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl border-l-8 border-l-blue-500 relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 font-display font-black text-lg flex items-center justify-center">5</span>
+              <div>
+                <h3 class="font-display font-bold text-xl text-white">Blindaje en Marcha: Break-Even + TP1 / TP2</h3>
+                <span class="text-xs text-blue-300 font-mono">Gestión de la Operación Viva</span>
+              </div>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-bold">Cobro Inteligente</span>
+          </div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            Una vez abierta la posición, el robot activa un escudo automático de 3 fases:
           </p>
+          <div class="grid sm:grid-cols-3 gap-3 text-xs">
+            <div class="bg-dark-950 p-3.5 rounded-xl border border-cyan-500/30">
+              <span class="text-cyan-400 font-bold block mb-1">🛡️ Break-Even (+1.2%)</span>
+              Sube el Stop-Loss al precio exacto de compra. A partir de aquí la operación es 100% libre de riesgo.
+            </div>
+            <div class="bg-dark-950 p-3.5 rounded-xl border border-emerald-500/30">
+              <span class="text-emerald-400 font-bold block mb-1">💰 TP1 Parcial (+2.0%)</span>
+              Vende el 50% de la moneda y guarda los USDT en tu saldo. Ganancia asegurada en el bolsillo.
+            </div>
+            <div class="bg-dark-950 p-3.5 rounded-xl border border-purple-500/30">
+              <span class="text-purple-400 font-bold block mb-1">🚀 TP2 Final (+6.0%)</span>
+              Deja correr el 50% restante con Stop-Loss protegido para surfear subidas gigantescas.
+            </div>
+          </div>
         </div>
-        <div class="glass-card rounded-2xl p-6 border border-emerald-500/30">
-          <div class="text-2xl mb-2">3️⃣ Salida con Ganancia</div>
-          <p class="text-gray-300 text-xs leading-relaxed">
-            Ahora no necesitas que Bitcoin vuelva a $75,000. Al rebotar apenas a <strong>$74,800</strong>, ¡toda la posición ya sale en ganancia verde!
-          </p>
-        </div>
+
       </div>
+
     </div>
   </section>
 
-  <!-- SECCIÓN 4.5: MEJORAS PROFESIONALES ACTIVAS -->
-  <section class="py-16 px-4 border-t border-white/5">
+  <!-- SECCIÓN: SIMULADOR INTERACTIVO DE RENDIMIENTO & RIESGO -->
+  <section id="simulador" class="py-20 px-4 border-t border-white/5 bg-dark-900/60 relative">
     <div class="max-w-5xl mx-auto">
+      
+      <div class="text-center mb-14">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-cyan">Laboratorio Cuantitativo</span>
+        <h2 class="font-display font-black text-3xl sm:text-5xl text-white mt-1 mb-3">
+          Simulador de Crecimiento & Interés Compuesto
+        </h2>
+        <p class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
+          Albert Einstein llamó al interés compuesto la "octava maravilla del mundo". Descubre cómo pequeñas ganancias consistentes multiplican tu capital con el bot.
+        </p>
+      </div>
+
+      <div class="glass-panel rounded-3xl p-6 sm:p-10 border border-white/10 glow-cyan">
+        
+        <!-- Controles Deslizantes Interactivos -->
+        <div class="grid md:grid-cols-3 gap-6 mb-10">
+          
+          <!-- Control 1: Capital Inicial -->
+          <div class="bg-dark-950/80 p-5 rounded-2xl border border-white/5">
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-bold text-gray-300 uppercase">Capital Inicial</label>
+              <span id="label-capital" class="text-emerald-400 font-mono font-bold">$1,000 USDT</span>
+            </div>
+            <input type="range" id="sim-capital" min="100" max="20000" step="100" value="1000" class="w-full accent-emerald-500 cursor-pointer">
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>$100</span>
+              <span>$10,000</span>
+              <span>$20,000</span>
+            </div>
+          </div>
+
+          <!-- Control 2: Tasa de Acierto / Win Rate -->
+          <div class="bg-dark-950/80 p-5 rounded-2xl border border-white/5">
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-bold text-gray-300 uppercase">Aciertos del Bot (%)</label>
+              <span id="label-winrate" class="text-cyan-400 font-mono font-bold">55% Ganadoras</span>
+            </div>
+            <input type="range" id="sim-winrate" min="35" max="80" step="5" value="55" class="w-full accent-cyan-500 cursor-pointer">
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>35% (Bajo)</span>
+              <span>55% (Normal)</span>
+              <span>80% (Óptimo)</span>
+            </div>
+          </div>
+
+          <!-- Control 3: Número de Operaciones Proyectadas -->
+          <div class="bg-dark-950/80 p-5 rounded-2xl border border-white/5">
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-bold text-gray-300 uppercase">Operaciones Totales</label>
+              <span id="label-trades" class="text-purple-400 font-mono font-bold">30 Operaciones</span>
+            </div>
+            <input type="range" id="sim-trades" min="10" max="100" step="5" value="30" class="w-full accent-purple-500 cursor-pointer">
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>10</span>
+              <span>50</span>
+              <span>100</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Panel de Resultados Proyectados -->
+        <div class="grid md:grid-cols-3 gap-6 items-center bg-gradient-to-tr from-emerald-950/60 via-dark-950 to-cyan-950/60 p-6 sm:p-8 rounded-2xl border border-emerald-500/30">
+          
+          <div>
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Capital Final Proyectado</span>
+            <div id="sim-final-capital" class="text-3xl sm:text-4xl font-display font-black text-emerald-400 mt-1">$1,634.20</div>
+            <div class="text-xs text-emerald-300/80 mt-1">Simulación matemática con reinversión</div>
+          </div>
+
+          <div>
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ganancia Neta Total</span>
+            <div id="sim-net-profit" class="text-2xl sm:text-3xl font-display font-black text-cyan-300 mt-1">+$634.20</div>
+            <div id="sim-return-pct" class="text-xs text-cyan-400 font-bold mt-1">+63.4% de Rendimiento</div>
+          </div>
+
+          <div class="border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 text-xs text-gray-300 space-y-1.5 font-mono">
+            <div class="flex justify-between">
+              <span class="text-gray-400">Ratio programado:</span>
+              <strong class="text-emerald-400">1:2 (TP +3% / SL -1.5%)</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Trades Ganadores:</span>
+              <strong id="sim-won-count" class="text-emerald-400">17 trades</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Trades Perdedores:</span>
+              <strong id="sim-lost-count" class="text-rose-400">13 trades</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Break-Even activado:</span>
+              <strong class="text-cyan-400">Protección al +1.2%</strong>
+            </div>
+          </div>
+
+        </div>
+
+        <p class="text-center text-[11px] text-gray-500 mt-4">
+          *Cálculo estimativo basado en asignación del 25% por posición, ratio matemático 1:2 y reinversión compuesta progresiva. Los resultados pasados no garantizan rendimientos futuros.
+        </p>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SECCIÓN: EXAMEN / QUIZ INTERACTIVO DE CERTIFICACIÓN -->
+  <section id="quiz" class="py-20 px-4 border-t border-white/5 relative">
+    <div class="max-w-4xl mx-auto">
+      
       <div class="text-center mb-12">
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-green">Optimización Cuantitativa</span>
-        <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-white mt-1 mb-3">5 Armas Profesionales para Ganar Más</h2>
-        <p class="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">Funciones avanzadas integradas en tu bot para blindar tu capital y cazar grandes subidas.</p>
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-purple">Evaluación de Conocimientos</span>
+        <h2 class="font-display font-black text-3xl sm:text-5xl text-white mt-1 mb-3">
+          Quiz de Certificación: Trader Oficial del Bot
+        </h2>
+        <p class="text-gray-400 text-sm max-w-xl mx-auto">
+          Responde correctamente las 5 preguntas sobre la estrategia y desbloquea tu insignia de Operador Certificado de TradingJammer.
+        </p>
+      </div>
+
+      <div class="glass-panel rounded-3xl p-6 sm:p-10 border border-white/10" id="quiz-container">
+        
+        <!-- Pregunta 1 -->
+        <div class="quiz-step mb-8" data-step="1">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold font-mono text-cyan-400">PREGUNTA 1 DE 5</span>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-white/5 text-gray-400">Fundamentos</span>
+          </div>
+          <h3 class="font-display font-bold text-lg sm:text-xl text-white mb-4">
+            ¿Qué significa cuando la EMA 9 (rápida, azul) cruza hacia arriba a la EMA 21 (lenta, naranja)?
+          </h3>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q1" value="A" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">A) El mercado está perdiendo fuerza y se debe vender inmediatamente.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q1" value="B" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300 font-semibold text-white">B) Se confirma un impulso acelerado comprador ("Cruce Dorado") que habilita compra.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q1" value="C" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">C) El mercado entró en pausa de 30 minutos sin volumen.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pregunta 2 -->
+        <div class="quiz-step mb-8" data-step="2">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold font-mono text-cyan-400">PREGUNTA 2 DE 5</span>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-white/5 text-gray-400">Filtro RSI</span>
+          </div>
+          <h3 class="font-display font-bold text-lg sm:text-xl text-white mb-4">
+            ¿Por qué el bot NO compra si el oscilador RSI está por encima de 70?
+          </h3>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q2" value="A" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300 font-semibold text-white">A) Porque el precio está en "Sobrecompra Extrema", inflado y con alto riesgo de caída inminente.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q2" value="B" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">B) Porque el bot solo opera criptomonedas pequeñas cuando el RSI es alto.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q2" value="C" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">C) Porque Render entra en suspensión si el RSI pasa de 70.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pregunta 3 -->
+        <div class="quiz-step mb-8" data-step="3">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold font-mono text-cyan-400">PREGUNTA 3 DE 5</span>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-white/5 text-gray-400">Gestión de Riesgo</span>
+          </div>
+          <h3 class="font-display font-bold text-lg sm:text-xl text-white mb-4">
+            ¿Qué función cumple el mecanismo de Break-Even automático al alcanzar +1.2%?
+          </h3>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q3" value="A" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300 font-semibold text-white">A) Mueve el Stop-Loss al precio de entrada para blindar la operación a Riesgo Cero (imposible perder).</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q3" value="B" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">B) Vende el 100% de la criptomoneda y apaga el bot.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q3" value="C" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">C) Reinicia el saldo virtual de la cuenta a $1,000 USDT.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pregunta 4 -->
+        <div class="quiz-step mb-8" data-step="4">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold font-mono text-cyan-400">PREGUNTA 4 DE 5</span>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-white/5 text-gray-400">Filtro Macro</span>
+          </div>
+          <h3 class="font-display font-bold text-lg sm:text-xl text-white mb-4">
+            Si el precio actual de Bitcoin está por DEBAJO de la EMA 200, ¿qué hace el robot?
+          </h3>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q4" value="A" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">A) Compra el doble de cantidad para promediar a la baja.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q4" value="B" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300 font-semibold text-white">B) Bloquea compras y se mantiene en espera, porque el mercado macro está en tendencia bajista peligrosa.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q4" value="C" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">C) Pide que enciendas la PC para confirmar la orden.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pregunta 5 -->
+        <div class="quiz-step mb-8" data-step="5">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold font-mono text-cyan-400">PREGUNTA 5 DE 5</span>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-white/5 text-gray-400">Operación Nube</span>
+          </div>
+          <h3 class="font-display font-bold text-lg sm:text-xl text-white mb-4">
+            ¿Es necesario tener la computadora encendida para que el robot opere y envíe alertas a Telegram?
+          </h3>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q5" value="A" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300 font-semibold text-white">A) No, el bot vive 100% en la nube con Webhook y despertador 24/7 permanente.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q5" value="B" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">B) Sí, la PC debe estar prendida todo el día y noche.</span>
+            </label>
+            <label class="flex items-center gap-3 p-3.5 rounded-xl bg-dark-950/60 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition">
+              <input type="radio" name="q5" value="C" class="accent-cyan-500">
+              <span class="text-xs sm:text-sm text-gray-300">C) Solo se necesita la PC encendida los domingos para el reporte.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Botón de Calificación -->
+        <div class="text-center pt-4 border-t border-white/10">
+          <button onclick="gradeQuiz()" class="bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-600 hover:opacity-90 text-dark-950 font-extrabold px-8 py-3.5 rounded-2xl text-sm transition transform hover:scale-105 shadow-xl">
+            🎓 Calificar Examen & Ver Resultados
+          </button>
+        </div>
+
+        <!-- Contenedor del Certificado (Oculto al inicio) -->
+        <div id="certificate-result" class="hidden mt-8 p-8 rounded-3xl bg-gradient-to-b from-dark-900 to-dark-950 border-2 border-amber-500/50 text-center relative overflow-hidden">
+          <div class="text-5xl mb-3">🏅</div>
+          <span class="text-xs font-bold uppercase tracking-widest text-amber-400 font-mono">CERTIFICADO OFICIAL DE ACREDITACIÓN</span>
+          <h4 class="font-display font-black text-2xl sm:text-3xl text-white mt-1 mb-2">Operador Cuantitativo Certificado</h4>
+          <p class="text-gray-300 text-sm max-w-md mx-auto mb-6">
+            Has demostrado dominio completo de los conceptos de Medias Móviles, RSI, Gestión Matemática 1:2 y Operatividad del Bot en la Nube.
+          </p>
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs">
+            <span>Puntuación Obtenida: <strong id="quiz-score-badge">5 / 5 (100%)</strong></span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SECCIÓN: MANUAL COMPLETO DE LOS 12 BOTONES DEL BOT -->
+  <section id="manual" class="py-20 px-4 border-t border-white/5 bg-dark-900/50">
+    <div class="max-w-6xl mx-auto">
+      
+      <div class="text-center mb-14">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-cyan">Manual de Bolsillo</span>
+        <h2 class="font-display font-black text-3xl sm:text-5xl text-white mt-1 mb-3">
+          Guía Completa de Botones Táctiles en Telegram
+        </h2>
+        <p class="text-gray-400 text-sm max-w-2xl mx-auto">
+          Tú o tu familiar solo necesitan tocar cualquiera de estos botones en la pantalla de su celular para tomar el control de su robot financiero.
+        </p>
       </div>
 
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="glass-card p-6 rounded-2xl border-t-2 border-t-emerald-400">
-          <div class="text-3xl mb-3">🛡️</div>
-          <h3 class="font-bold text-white text-base mb-1">Break-Even Automático</h3>
-          <p class="text-xs text-gray-400 leading-relaxed">Al alcanzar +1.2% de ganancia, el Stop-Loss sube al precio de entrada. Es imposible perder: la operación es 100% libre de riesgo.</p>
+        
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-emerald-400">
+          <div class="text-2xl mb-2">📊</div>
+          <h3 class="font-bold text-white text-base mb-1">Mi Saldo & Estado</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Consulta al instante tu capital disponible en USDT, el precio de Bitcoin en tiempo real y el rendimiento (+% / -%) de cualquier operación activa.
+          </p>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl border-t-2 border-t-cyan-400">
-          <div class="text-3xl mb-3">💰</div>
-          <h3 class="font-bold text-white text-base mb-1">TP1 y TP2 Escalonados</h3>
-          <p class="text-xs text-gray-400 leading-relaxed">Vende 50% al +2.0% asegurando ganancias en balance, y deja correr el otro 50% hacia el +6.0% para capturar grandes tendencias.</p>
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-cyan-400">
+          <div class="text-2xl mb-2">📈</div>
+          <h3 class="font-bold text-white text-base mb-1">Precio & Señal</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Ejecuta un diagnóstico completo en segundos: cálculo de EMA 9, EMA 21, EMA 200, lectura de RSI y veredicto actual (COMPRA, VENTA o ESPERA).
+          </p>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl border-t-2 border-t-purple-400">
-          <div class="text-3xl mb-3">🌊</div>
-          <h3 class="font-bold text-white text-base mb-1">Filtro Macro EMA 200</h3>
-          <p class="text-xs text-gray-400 leading-relaxed">El bot solo compra si el precio está sobre la Media Móvil de 200 periodos, evitando comprar en trampas y mercados bajistas.</p>
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-blue-400">
+          <div class="text-2xl mb-2">📸</div>
+          <h3 class="font-bold text-white text-base mb-1">Ver Gráfico en Foto</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            El bot genera un gráfico HD en tema oscuro con las últimas 40 velas japonesas, las dos líneas de EMA y el oscilador RSI directamente en tu chat.
+          </p>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl border-t-2 border-t-amber-400">
-          <div class="text-3xl mb-3">🐳</div>
-          <h3 class="font-bold text-white text-base mb-1">Filtro de Volumen de Ballenas</h3>
-          <p class="text-xs text-gray-400 leading-relaxed">Confirma que la vela tenga un volumen superior al promedio, garantizando que grandes inversores institucionales están empujando el precio.</p>
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-amber-400">
+          <div class="text-2xl mb-2">🦅</div>
+          <h3 class="font-bold text-white text-base mb-1">Escáner Radar</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Rastrea simultáneamente el TOP 8 de criptos (BTC, ETH, SOL, BNB, DOGE, XRP, ADA, AVAX) y te avisa cuál tiene cruce favorable para operar.
+          </p>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl border-t-2 border-t-rose-400 sm:col-span-2 lg:col-span-1">
-          <div class="text-3xl mb-3">🧘</div>
-          <h3 class="font-bold text-white text-base mb-1">Pausa Inteligente (Cool-Down)</h3>
-          <p class="text-xs text-gray-400 leading-relaxed">Si una operación toca el Stop-Loss, el bot pausa compras por 30 minutos para evitar operar por revancha en un mercado inestable.</p>
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-purple-400">
+          <div class="text-2xl mb-2">🧠</div>
+          <h3 class="font-bold text-white text-base mb-1">Miedo & Codicia</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Consulta el índice oficial Fear & Greed del mercado de 0 a 100 con barra visual, advirtiendo si la masa está en pánico extremo o euforia ciega.
+          </p>
         </div>
+
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-emerald-400">
+          <div class="text-2xl mb-2">☀️</div>
+          <h3 class="font-bold text-white text-base mb-1">Resumen Diario</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Reporte financiero de las últimas 24 horas: total de trades ejecutados, balance neto ganado, porcentaje de efectividad y estado general del motor.
+          </p>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-emerald-500">
+          <div class="text-2xl mb-2">🚀</div>
+          <h3 class="font-bold text-white text-base mb-1">Iniciar Trading</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Enciende el motor autónomo. El bot comenzará a analizar velas cada 15 segundos y abrirá compras automáticas cuando todas las reglas se cumplan.
+          </p>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-rose-400">
+          <div class="text-2xl mb-2">⏹️</div>
+          <h3 class="font-bold text-white text-base mb-1">Pausar Trading</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Detiene la apertura de nuevas posiciones automáticas de inmediato, respetando las operaciones que ya estuvieran abiertas hasta su cierre.
+          </p>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-cyan-500">
+          <div class="text-2xl mb-2">🔄</div>
+          <h3 class="font-bold text-white text-base mb-1">Reiniciar Bot</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Reinicia todos los módulos en caliente en la nube y ofrece un botón táctil para restablecer el saldo simulado a los $1,000 USDT iniciales si lo deseas.
+          </p>
+        </div>
+
       </div>
+
     </div>
   </section>
 
-  <!-- SECCIÓN 5: CALCULADORA INTERACTIVA -->
-  <section id="calculadora" class="py-16 px-4 border-t border-white/5">
+  <!-- GLOSARIO DEL TRADER CRIPTO (ACORDEÓN A-Z) -->
+  <section class="py-20 px-4 border-t border-white/5 relative">
     <div class="max-w-4xl mx-auto">
-      <div class="text-center mb-10">
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-green">Herramienta Interactiva</span>
-        <h2 class="font-display font-extrabold text-3xl text-white mt-1 mb-2">Calculadora de Interés Compuesto</h2>
-        <p class="text-gray-400 text-sm">Prueba cómo crecería tu capital proyectando operaciones constantes.</p>
+      
+      <div class="text-center mb-12">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-cyan">Diccionario Financiero</span>
+        <h2 class="font-display font-black text-3xl sm:text-4xl text-white mt-1 mb-3">
+          Glosario Cripto Profesional (A a la Z)
+        </h2>
+        <p class="text-gray-400 text-sm">Los términos clave que escucharás en Wall Street y en el ecosistema cripto.</p>
       </div>
 
-      <div class="glass rounded-3xl p-6 sm:p-8 border border-white/10">
-        <div class="grid sm:grid-cols-3 gap-6 mb-8">
-          <div>
-            <label class="block text-xs font-bold text-gray-300 uppercase mb-2">Capital Inicial (USDT)</label>
-            <input type="number" id="calc-capital" value="1000" class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:outline-none focus:border-brand-green">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-300 uppercase mb-2">Ganancia neta x Trade (%)</label>
-            <input type="number" id="calc-win" value="3" step="0.5" class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:outline-none focus:border-brand-green">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-300 uppercase mb-2">Número de Operaciones</label>
-            <input type="number" id="calc-trades" value="20" class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:outline-none focus:border-brand-green">
-          </div>
-        </div>
+      <div class="space-y-3" id="glossary-accordion">
+        
+        <details class="glass-card rounded-2xl p-4 border border-white/5 group">
+          <summary class="font-bold text-sm text-white cursor-pointer flex justify-between items-center">
+            <span>🛡️ Break-Even</span>
+            <span class="text-cyan-400 text-xs group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <p class="text-xs text-gray-300 mt-3 leading-relaxed">
+            Punto de equilibrio o riesgo cero. Se produce cuando el Stop-Loss se mueve exactamente al precio donde compraste, de modo que si el mercado se desploma de repente, sales sin ganar ni perder nada.
+          </p>
+        </details>
 
-        <div class="bg-gradient-to-r from-emerald-950/60 to-cyan-950/60 p-6 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <span class="text-xs uppercase text-gray-400 font-semibold tracking-wider">Capital Final Proyectado</span>
-            <div id="calc-result" class="text-3xl sm:text-4xl font-extrabold font-display text-emerald-400 mt-1">$1,806.11 USDT</div>
-          </div>
-          <div class="text-right sm:border-l sm:border-white/10 sm:pl-6">
-            <span class="text-xs uppercase text-gray-400 font-semibold">Ganancia Neta</span>
-            <div id="calc-profit" class="text-xl sm:text-2xl font-bold text-cyan-300 mt-1">+$806.11 (+80.6%)</div>
-          </div>
-        </div>
+        <details class="glass-card rounded-2xl p-4 border border-white/5 group">
+          <summary class="font-bold text-sm text-white cursor-pointer flex justify-between items-center">
+            <span>📈 Cruce Dorado (Golden Cross)</span>
+            <span class="text-cyan-400 text-xs group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <p class="text-xs text-gray-300 mt-3 leading-relaxed">
+            Patrón alcista donde una media móvil rápida (como la EMA 9) corta hacia arriba a una media lenta (como la EMA 21), indicando que el precio promedio reciente es significativamente más alto y la tendencia es compradora.
+          </p>
+        </details>
+
+        <details class="glass-card rounded-2xl p-4 border border-white/5 group">
+          <summary class="font-bold text-sm text-white cursor-pointer flex justify-between items-center">
+            <span>🎯 Dollar-Cost Averaging (DCA)</span>
+            <span class="text-cyan-400 text-xs group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <p class="text-xs text-gray-300 mt-3 leading-relaxed">
+            Estrategia de inversión dividida. En vez de poner todo el dinero en una sola compra, se divide la entrada. Si el precio retrocede un poco, se hace una segunda compra para promediar el costo a la baja y obtener ganancias con un rebote menor.
+          </p>
+        </details>
+
+        <details class="glass-card rounded-2xl p-4 border border-white/5 group">
+          <summary class="font-bold text-sm text-white cursor-pointer flex justify-between items-center">
+            <span>📉 Drawdown</span>
+            <span class="text-cyan-400 text-xs group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <p class="text-xs text-gray-300 mt-3 leading-relaxed">
+            La caída porcentual máxima que experimenta una cuenta desde su punto más alto (pico) hasta su punto más bajo antes de recuperarse. La gestión de riesgo del bot mantiene el drawdown bajo control estricto.
+          </p>
+        </details>
+
+        <details class="glass-card rounded-2xl p-4 border border-white/5 group">
+          <summary class="font-bold text-sm text-white cursor-pointer flex justify-between items-center">
+            <span>😱 FOMO (Fear Of Missing Out)</span>
+            <span class="text-cyan-400 text-xs group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <p class="text-xs text-gray-300 mt-3 leading-relaxed">
+            El "miedo a quedarse afuera". Es el error psicológico más común de comprar cuando una moneda ya subió un 20% en minutos. El bot nunca sufre de FOMO porque su filtro de RSI bloquea compras en sobrecompra extrema.
+          </p>
+        </details>
+
+        <details class="glass-card rounded-2xl p-4 border border-white/5 group">
+          <summary class="font-bold text-sm text-white cursor-pointer flex justify-between items-center">
+            <span>🐳 Ballenas (Whales)</span>
+            <span class="text-cyan-400 text-xs group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <p class="text-xs text-gray-300 mt-3 leading-relaxed">
+            Grandes inversores, fondos institucionales o personas con carteras de cientos de millones de dólares capaces de mover el precio con sus compras. El bot detecta sus inyecciones mediante el filtro de volumen de 20 velas.
+          </p>
+        </details>
+
       </div>
+
     </div>
   </section>
 
-  <!-- SECCIÓN 6: MANUAL RÁPIDO DEL BOT DE TELEGRAM -->
-  <section id="manual" class="py-16 px-4 bg-dark-800/40 border-t border-white/5">
-    <div class="max-w-5xl mx-auto">
-      <div class="text-center mb-12">
-        <span class="text-xs font-bold uppercase tracking-wider text-brand-cyan">Guía de Bolsillo</span>
-        <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-white mt-1 mb-3">6. Manual de Botones en Telegram</h2>
-        <p class="text-gray-400 max-w-xl mx-auto text-sm sm:text-base">Todo lo que tu familiar puede hacer tocando la pantalla de su celular.</p>
-      </div>
+  <!-- BANNER FINAL CALL TO ACTION -->
+  <section class="py-16 px-4 border-t border-white/5 bg-gradient-to-b from-dark-900 to-dark-950 text-center">
+    <div class="max-w-4xl mx-auto glass-panel p-8 sm:p-12 rounded-3xl border border-white/10 relative overflow-hidden">
+      <div class="absolute -top-20 -left-20 w-60 h-60 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-20 -right-20 w-60 h-60 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-emerald-400">
-          <div class="font-bold text-white mb-1">📊 Mi Saldo & Estado</div>
-          <p class="text-xs text-gray-400">Muestra el saldo en USDT, el precio en vivo y el PnL (+% / -%) de cualquier operación activa.</p>
-        </div>
+      <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">¿Listo para Operar?</span>
+      <h2 class="font-display font-black text-3xl sm:text-5xl text-white mt-2 mb-4">
+        Conecta con tu Bot y Comienza Hoy
+      </h2>
+      <p class="text-gray-300 text-sm sm:text-base max-w-xl mx-auto mb-8">
+        El servidor está despierto en la nube 24/7. Abre Telegram en tu celular y pulsa cualquier botón táctil para poner a prueba tu conocimiento.
+      </p>
 
-        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-cyan-400">
-          <div class="font-bold text-white mb-1">📸 Ver Gráfico en Foto</div>
-          <p class="text-xs text-gray-400">Envía una imagen HD con velas japonesas, las dos EMAs y el oscilador RSI generado en el momento.</p>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-amber-400">
-          <div class="font-bold text-white mb-1">🦅 Escáner Radar</div>
-          <p class="text-xs text-gray-400">Analiza las 8 principales criptomonedas (BTC, ETH, SOL, etc.) y detecta cuáles tienen señal de compra inmediata.</p>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-purple-400">
-          <div class="font-bold text-white mb-1">🧠 Miedo & Codicia</div>
-          <p class="text-xs text-gray-400">Muestra el termómetro de sentimiento de 0 a 100 para saber si el mercado está eufórico o en pánico.</p>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-emerald-400">
-          <div class="font-bold text-white mb-1">🚀 Iniciar / ⏹️ Pausar</div>
-          <p class="text-xs text-gray-400">Arranca el monitoreo automático 24/7 o lo pausa temporalmente con un solo clic.</p>
-        </div>
-
-        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-cyan-400">
-          <div class="font-bold text-white mb-1">🔄 Reiniciar Bot</div>
-          <p class="text-xs text-gray-400">Recarga todos los subsistemas sin desconectar la nube y permite restablecer el saldo a $1,000 USDT.</p>
-        </div>
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="https://t.me/TradingJammerBot" target="_blank" rel="noopener noreferrer"
+           class="bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600 hover:opacity-90 text-dark-950 font-extrabold px-8 py-4 rounded-2xl text-base transition transform hover:scale-105 shadow-xl flex items-center gap-2">
+          <span>Abrir @TradingJammerBot</span>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+        </a>
       </div>
     </div>
   </section>
 
   <!-- FOOTER -->
-  <footer class="py-8 px-4 border-t border-white/5 text-center text-xs text-gray-500">
-    <p>🤖 Bot de Cripto Trading Pro | Desarrollado con CCXT, Python y Telegram Bot API.</p>
-    <p class="mt-1 text-gray-600">Aviso: El trading de criptomonedas conlleva riesgos. Esta herramienta está pensada para fines educativos y simulación cuantitativa.</p>
+  <footer class="py-10 px-4 border-t border-white/5 bg-dark-950 text-center text-xs text-gray-500">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">🤖</span>
+        <span class="font-display font-bold text-white">TradingJammer Academia</span>
+        <span>•</span>
+        <span>Tecnología Cuantitativa 2026</span>
+      </div>
+      <div class="text-gray-400">
+        Desarrollado con CCXT, Python & Telegram Bot API.
+      </div>
+    </div>
+    <p class="mt-4 text-[11px] text-gray-600 max-w-2xl mx-auto">
+      Descargo de responsabilidad: El trading de criptomonedas conlleva volatilidad y riesgo de capital. Esta plataforma tiene fines puramente educativos, formativos y de simulación algorítmica.
+    </p>
   </footer>
 
-  <!-- SCRIPT CALCULADORA -->
+  <!-- JAVASCRIPT INTERACTIVO COMPLETO -->
   <script>
-    const capInput = document.getElementById('calc-capital');
-    const winInput = document.getElementById('calc-win');
-    const tradesInput = document.getElementById('calc-trades');
-    const resultEl = document.getElementById('calc-result');
-    const profitEl = document.getElementById('calc-profit');
+    // 1. SISTEMA DE SEGUIMIENTO DE PROGRESO DE MÓDULOS (LOCALSTORAGE)
+    const totalModules = 6;
+    let completedModules = JSON.parse(localStorage.getItem('tj_completed_modules') || '[1]');
 
-    function updateCalc() {
-      const cap = parseFloat(capInput.value) || 0;
-      const win = (parseFloat(winInput.value) || 0) / 100;
-      const trades = parseInt(tradesInput.value) || 0;
+    function updateProgressUI() {
+      const count = completedModules.length;
+      const pct = Math.round((count / totalModules) * 100);
+      
+      const bar = document.getElementById('course-progress-bar');
+      const text = document.getElementById('progress-percentage-text');
+      const countText = document.getElementById('modules-completed-text');
 
-      // Interés compuesto con reinversión parcial (ej. 25% asignado)
-      // O ganancia por trade sobre posición completa
-      let finalCap = cap;
-      for (let i = 0; i < trades; i++) {
-        const tradeSize = finalCap * 0.25; // 25% por trade
-        finalCap += tradeSize * win;
+      if (bar) bar.style.width = `${pct}%`;
+      if (text) text.textContent = `${pct}%`;
+      if (countText) countText.textContent = `${count} de ${totalModules} Módulos`;
+
+      for (let i = 1; i <= totalModules; i++) {
+        const btn = document.getElementById(`btn-mod-${i}`);
+        if (btn) {
+          if (completedModules.includes(i)) {
+            btn.innerHTML = `<span class="text-emerald-400">✓ Completado</span>`;
+            btn.classList.add('bg-emerald-950/40', 'border-emerald-500/40', 'text-emerald-300');
+            btn.classList.remove('bg-dark-850', 'text-gray-300');
+          } else {
+            btn.innerHTML = `<span>Marcar como Leído</span>`;
+            btn.classList.remove('bg-emerald-950/40', 'border-emerald-500/40', 'text-emerald-300');
+            btn.classList.add('bg-dark-850', 'text-gray-300');
+          }
+        }
       }
-
-      const profit = finalCap - cap;
-      const profitPct = (profit / (cap || 1)) * 100;
-
-      resultEl.textContent = `$${finalCap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
-      profitEl.textContent = `+${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+${profitPct.toFixed(1)}%)`;
     }
 
-    [capInput, winInput, tradesInput].forEach(el => el.addEventListener('input', updateCalc));
-    updateCalc();
+    function toggleModuleCheck(id) {
+      if (completedModules.includes(id)) {
+        completedModules = completedModules.filter(m => m !== id);
+      } else {
+        completedModules.push(id);
+      }
+      localStorage.setItem('tj_completed_modules', JSON.stringify(completedModules));
+      updateProgressUI();
+    }
+
+    // 2. SIMULADOR CUANTITATIVO DE CRECIMIENTO
+    const simCapital = document.getElementById('sim-capital');
+    const simWinrate = document.getElementById('sim-winrate');
+    const simTrades = document.getElementById('sim-trades');
+
+    const labelCap = document.getElementById('label-capital');
+    const labelWin = document.getElementById('label-winrate');
+    const labelTrades = document.getElementById('label-trades');
+
+    const simFinal = document.getElementById('sim-final-capital');
+    const simProfit = document.getElementById('sim-net-profit');
+    const simReturn = document.getElementById('sim-return-pct');
+    const simWon = document.getElementById('sim-won-count');
+    const simLost = document.getElementById('sim-lost-count');
+
+    function calculateSimulation() {
+      const cap = parseFloat(simCapital.value);
+      const winrate = parseFloat(simWinrate.value) / 100;
+      const trades = parseInt(simTrades.value);
+
+      labelCap.textContent = `$${cap.toLocaleString()} USDT`;
+      labelWin.textContent = `${Math.round(winrate * 100)}% Ganadoras`;
+      labelTrades.textContent = `${trades} Operaciones`;
+
+      const wonTrades = Math.round(trades * winrate);
+      const lostTrades = trades - wonTrades;
+
+      simWon.textContent = `${wonTrades} trades`;
+      simLost.textContent = `${lostTrades} trades`;
+
+      // Simulación de interés compuesto progresivo:
+      // Cada trade arriesga 25% de la cuenta con TP de 3.0% y SL de 1.5%
+      let balance = cap;
+      for (let i = 0; i < trades; i++) {
+        const isWin = i < wonTrades;
+        const positionSize = balance * 0.25;
+        if (isWin) {
+          balance += positionSize * 0.03; // +3.0%
+        } else {
+          balance -= positionSize * 0.015; // -1.5%
+        }
+      }
+
+      const netProfit = balance - cap;
+      const returnPct = (netProfit / cap) * 100;
+
+      simFinal.textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      simProfit.textContent = `${netProfit >= 0 ? '+' : ''}$${netProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      simReturn.textContent = `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(1)}% de Rendimiento`;
+
+      if (netProfit >= 0) {
+        simProfit.className = "text-2xl sm:text-3xl font-display font-black text-emerald-400 mt-1";
+      } else {
+        simProfit.className = "text-2xl sm:text-3xl font-display font-black text-rose-400 mt-1";
+      }
+    }
+
+    [simCapital, simWinrate, simTrades].forEach(input => {
+      input.addEventListener('input', calculateSimulation);
+    });
+
+    // 3. SISTEMA DE EVALUACIÓN / QUIZ DE CERTIFICACIÓN
+    const correctAnswers = {
+      q1: 'B',
+      q2: 'A',
+      q3: 'A',
+      q4: 'B',
+      q5: 'A'
+    };
+
+    function gradeQuiz() {
+      let score = 0;
+      let total = 5;
+
+      for (let i = 1; i <= total; i++) {
+        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+        if (selected && selected.value === correctAnswers[`q${i}`]) {
+          score++;
+        }
+      }
+
+      const resultBox = document.getElementById('certificate-result');
+      const scoreBadge = document.getElementById('quiz-score-badge');
+
+      resultBox.classList.remove('hidden');
+      scoreBadge.textContent = `${score} / ${total} (${Math.round((score/total)*100)}%)`;
+
+      if (score >= 4) {
+        resultBox.scrollIntoView({ behavior: 'smooth' });
+        // Marcar todos los módulos como completados
+        completedModules = [1, 2, 3, 4, 5, 6];
+        localStorage.setItem('tj_completed_modules', JSON.stringify(completedModules));
+        updateProgressUI();
+      } else {
+        alert(`Obtuviste ${score} de 5 aciertos. Revisa los módulos de la estrategia e intenta de nuevo para desbloquear tu certificación.`);
+      }
+    }
+
+    // Iniciar interfaces al cargar
+    updateProgressUI();
+    calculateSimulation();
   </script>
 </body>
 </html>

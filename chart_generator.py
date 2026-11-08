@@ -54,7 +54,7 @@ def generate_candlestick_chart(df: pd.DataFrame, symbol: str, timeframe: str,
     ax_main.plot(df_plot.index, df_plot['slow_ema'], color='#f59e0b', linewidth=1.8, label=f'EMA {slow_ema} (Lenta)')
 
     last_price = df_plot['close'].iloc[-1]
-    ax_main.set_title(f"📊 {symbol} ({timeframe}) | Último Precio: ${last_price:,.2f}", fontsize=13, fontweight='bold', color='#f8fafc', pad=10)
+    ax_main.set_title(f"{symbol} ({timeframe}) | Último Precio: ${last_price:,.2f}", fontsize=13, fontweight='bold', color='#f8fafc', pad=10)
     ax_main.legend(loc='upper left', facecolor='#0f172a', edgecolor='#334155', fontsize=9)
     ax_main.grid(True, linestyle='--', alpha=0.2, color='#94a3b8')
     ax_main.yaxis.tick_right()

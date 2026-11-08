@@ -8,8 +8,8 @@ load_dotenv()
 @dataclass
 class BotConfig:
     bot_mode: str = os.getenv("BOT_MODE", "paper").lower()
-    exchange_id: str = os.getenv("EXCHANGE_ID", "binance").lower()
-    use_testnet: bool = os.getenv("USE_TESTNET", "true").lower() in ("true", "1", "yes")
+    exchange_id: str = os.getenv("EXCHANGE_ID", "bybit").lower()
+    use_testnet: bool = os.getenv("USE_TESTNET", "false").lower() in ("true", "1", "yes")
     
     api_key: str = os.getenv("API_KEY", "")
     api_secret: str = os.getenv("API_SECRET", "")

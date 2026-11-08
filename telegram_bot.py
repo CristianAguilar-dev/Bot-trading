@@ -208,14 +208,14 @@ class TelegramTradingBot:
 
     def get_main_keyboard(self) -> Dict:
         """Teclado táctil completo con todas las nuevas mejoras."""
-        dca_text = "🎯 DCA: [ACTIVADO]" if self.risk_mgr.dca_enabled else "🎯 DCA: [DESACTIVADO]"
         return {
             "keyboard": [
                 [{"text": "📊 Mi Saldo & Estado"}, {"text": "📈 Precio & Señal"}],
                 [{"text": "📸 Ver Gráfico en Foto"}, {"text": "🦅 Escáner Radar"}],
                 [{"text": "🚀 Iniciar Trading"}, {"text": "⏹️ Pausar Trading"}],
                 [{"text": "🧠 Miedo & Codicia"}, {"text": "☀️ Resumen Diario"}],
-                [{"text": "📜 Historial"}, {"text": "⚙️ Ajustes"}]
+                [{"text": "📜 Historial"}, {"text": "🔄 Reiniciar Bot"}],
+                [{"text": "⚙️ Ajustes"}]
             ],
             "resize_keyboard": True,
             "is_persistent": True
@@ -498,6 +498,10 @@ class TelegramTradingBot:
                 ],
                 [
                     {"text": dca_text, "callback_data": "toggle_dca"}
+                ],
+                [
+                    {"text": "🔄 Reiniciar Bot", "callback_data": "do_restart"},
+                    {"text": "♻️ Restablecer Saldo", "callback_data": "reset_balance"}
                 ]
             ]
         }
@@ -511,6 +515,79 @@ class TelegramTradingBot:
             f"👇 *Toca un botón para cambiar opciones:*"
         )
         self.send_message(chat_id, text, reply_markup=markup)
+
+    def handle_restart(self, chat_id: int):
+        """Reinicia los subsistemas del bot, recarga la configuración y verifica conexiones."""
+        self.send_message(chat_id, "⏳ *Reiniciando subsistemas del bot...* Por favor espera unos segundos.")
+        was_active = self.is_trading_active
+        if was_active:
+            self.is_trading_active = False
+            self.stop_signal.set()
+            time.sleep(1)
+
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(override=True)
+            self.config = BotConfig()
+
+            self.client = ExchangeClient(
+                exchange_id=self.config.exchange_id,
+                api_key=self.config.api_key,
+                api_secret=self.config.api_secret,
+                use_testnet=self.config.use_testnet,
+                paper_mode=self.config.is_paper(),
+                initial_balance=self.config.initial_balance
+            )
+            self.strategy = EmaRsiStrategy(
+                fast_ema=self.config.fast_ema,
+                slow_ema=self.config.slow_ema,
+                rsi_period=self.config.rsi_period,
+                rsi_buy_threshold=self.config.rsi_buy_threshold,
+                rsi_overbought=self.config.rsi_overbought,
+                rsi_oversold=self.config.rsi_oversold
+            )
+            self.load_state()
+
+            # Probar conexion con Binance
+            price = self.client.fetch_current_price(self.config.symbol)
+
+            # Reanudar trading si estaba activo
+            if was_active:
+                self.is_trading_active = True
+                self.stop_signal.clear()
+                self.trade_thread = threading.Thread(target=self._trading_loop, daemon=True)
+                self.trade_thread.start()
+
+            status_str = "🟢 ACTIVO (Operando)" if was_active else "⏸️ PAUSADO"
+            msg = (
+                f"🔄 *¡BOT REINICIADO CON ÉXITO!*\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"• *Exchange:* `{self.config.exchange_id.upper()}` (🟢 Conectado)\n"
+                f"• *Par Activo:* `{self.config.symbol}` (${price:,.2f})\n"
+                f"• *Estrategia:* `EMA {self.config.fast_ema}/{self.config.slow_ema} + RSI`\n"
+                f"• *Estado Operativo:* `{status_str}`\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"Todos los subsistemas se recargaron desde cero sin desconectar el servidor."
+            )
+            markup = {"inline_keyboard": [[{"text": "♻️ Restablecer Saldo a $1,000 USDT", "callback_data": "reset_balance"}]]}
+            self.send_message(chat_id, msg, reply_markup=markup)
+        except Exception as e:
+            self.send_message(chat_id, f"❌ Error durante el reinicio: `{e}`")
+
+    def handle_reset_balance(self, chat_id: int):
+        """Restablece el saldo virtual y limpia el historial."""
+        self.client.paper_balance = {'USDT': self.config.initial_balance, 'crypto': 0.0}
+        self.client.paper_history = []
+        self.risk_mgr.active_position = None
+        self.save_state()
+        self.send_message(
+            chat_id,
+            f"♻️ *CARTERA RESTABLECIDA*\n\n"
+            f"• *Saldo Virtual:* `${self.config.initial_balance:,.2f} USDT`\n"
+            f"• *Posiciones:* Ninguna\n"
+            f"• *Historial:* Limpio y listo para empezar de cero.",
+            reply_markup=self.get_main_keyboard()
+        )
 
     def handle_force_sell(self, chat_id: int):
         if not self.risk_mgr.active_position:
@@ -664,6 +741,10 @@ class TelegramTradingBot:
                 self.handle_force_sell(cid)
             elif data == "toggle_dca":
                 self.handle_toggle_dca(cid)
+            elif data == "do_restart":
+                self.handle_restart(cid)
+            elif data == "reset_balance":
+                self.handle_reset_balance(cid)
             elif data.startswith("set_pair_"):
                 self.config.symbol = data.replace("set_pair_", "")
                 self.send_message(cid, f"✅ Par actualizado a *{self.config.symbol}*")
@@ -698,6 +779,10 @@ class TelegramTradingBot:
                 self.handle_pause_trading(cid)
             elif text in ("📜 Historial", "/historial"):
                 self.handle_history(cid)
+            elif text in ("🔄 Reiniciar Bot", "/restart", "/reiniciar"):
+                self.handle_restart(cid)
+            elif text in ("♻️ Restablecer Saldo", "/reset_balance"):
+                self.handle_reset_balance(cid)
             elif text in ("⚙️ Ajustes", "/ajustes", "/config"):
                 self.handle_settings(cid)
             elif text in ("❓ Ayuda", "/ayuda", "/help"):

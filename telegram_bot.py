@@ -132,8 +132,14 @@ class TelegramTradingBot:
                             trailing_pct=p["trailing_pct"],
                             opened_at=p["opened_at"],
                             dca_count=p.get("dca_count", 1),
-                            dca_enabled=p.get("dca_enabled", False)
+                            dca_enabled=p.get("dca_enabled", False),
+                            break_even_hit=p.get("break_even_hit", False),
+                            tp1_price=p.get("tp1_price", p["entry_price"] * 1.02),
+                            tp2_price=p.get("tp2_price", p["entry_price"] * 1.06),
+                            tp1_hit=p.get("tp1_hit", False)
                         )
+                    if "cooldown_until" in data:
+                        self.risk_mgr.cooldown_until = float(data["cooldown_until"])
                     print(f"{Fore.GREEN}[OK] Estado anterior cargado correctamente.{Style.RESET_ALL}")
             except Exception as e:
                 print(f"{Fore.RED}[WARN] No se pudo leer estado: {e}{Style.RESET_ALL}")
@@ -156,7 +162,11 @@ class TelegramTradingBot:
                     "trailing_pct": p.trailing_pct,
                     "opened_at": p.opened_at,
                     "dca_count": p.dca_count,
-                    "dca_enabled": p.dca_enabled
+                    "dca_enabled": p.dca_enabled,
+                    "break_even_hit": p.break_even_hit,
+                    "tp1_price": p.tp1_price,
+                    "tp2_price": p.tp2_price,
+                    "tp1_hit": p.tp1_hit
                 }
 
             data = {
@@ -164,6 +174,7 @@ class TelegramTradingBot:
                 "paper_balance": self.client.paper_balance,
                 "paper_history": self.client.paper_history,
                 "dca_enabled": self.risk_mgr.dca_enabled,
+                "cooldown_until": self.risk_mgr.cooldown_until,
                 "active_position": pos_dict
             }
             with open(STATE_FILE, "w", encoding="utf-8") as f:
@@ -265,6 +276,9 @@ class TelegramTradingBot:
         status_icon = "🟢 ACTIVO (Operando)" if self.is_trading_active else "⏸️ PAUSADO"
         dca_badge = "✅ Activado" if self.risk_mgr.dca_enabled else "⚪ Desactivado"
 
+        in_cool, rem_mins = self.risk_mgr.is_in_cooldown()
+        cool_text = f"\n• *Pausa Inteligente:* 🧘 Activa ({rem_mins} min restantes)" if in_cool else ""
+
         msg = [
             f"📊 *ESTADO GENERAL DEL BOT*",
             f"━━━━━━━━━━━━━━━━━━",
@@ -273,7 +287,7 @@ class TelegramTradingBot:
             f"• *Precio:* `${price:,.2f} USD`",
             f"• *Saldo USDT:* `${quote_bal:,.2f}`",
             f"• *Saldo Crypto:* `{crypto_bal:.6f} {base_curr}`",
-            f"• *Estrategia DCA:* {dca_badge}",
+            f"• *Estrategia DCA:* {dca_badge}{cool_text}",
             f"━━━━━━━━━━━━━━━━━━"
         ]
 
@@ -284,13 +298,17 @@ class TelegramTradingBot:
             pnl_val = (price - pos.entry_price) * pos.amount
             emoji_pnl = "🟢 +" if pnl_pct >= 0 else "🔴 "
             dca_info = f" (Compras DCA: {pos.dca_count})" if pos.dca_count > 1 else ""
+            be_status = "✅ Activo (Riesgo Cero)" if pos.break_even_hit else "Pendiente (+1.2%)"
+            tp1_status = "✅ 50% Cobrado" if pos.tp1_hit else f"${pos.tp1_price:,.2f} (+2.0%)"
 
             msg.extend([
                 f"🎯 *POSICIÓN ABIERTA ACTIVA{dca_info}:*",
                 f"• *Precio Entrada:* `${pos.entry_price:,.2f}`",
                 f"• *PnL en Vivo:* {emoji_pnl}*{pnl_val:+.2f} USD ({pnl_pct:+.2f}%)*",
-                f"• *Take-Profit:* `${pos.take_profit_price:,.2f} (+{self.config.take_profit_pct}%)`",
-                f"• *Stop-Loss:* `${pos.stop_loss_price:,.2f} (-{self.config.stop_loss_pct}%)`",
+                f"• *Break-Even:* `{be_status}`",
+                f"• *TP1 (50%):* `{tp1_status}`",
+                f"• *TP2 Final:* `${pos.tp2_price:,.2f} (+6.0%)`",
+                f"• *Stop-Loss:* `${pos.stop_loss_price:,.2f}`",
                 f"• *Abierta el:* `{pos.opened_at}`"
             ])
             inline_buttons.append([{"text": "⚡ Cerrar Posición Ahora", "callback_data": "force_sell"}])
@@ -423,21 +441,25 @@ class TelegramTradingBot:
     def handle_price_and_signal(self, chat_id: int):
         self.send_message(chat_id, f"⏳ Analizando mercado en vivo para `{self.config.symbol}`...")
         try:
-            df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=50)
+            df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=220)
             price = self.client.fetch_current_price(self.config.symbol)
             has_pos = self.risk_mgr.active_position is not None
             signal = self.strategy.analyze(df, has_open_position=has_pos)
             
             signal_emoji = "🟢 COMPRA" if signal.action == "BUY" else ("🔴 VENTA" if signal.action == "SELL" else "⚪ ESPERAR (HOLD)")
+            macro_emoji = "🌊 Alcista (> EMA 200)" if price >= signal.ema_200 else "🐻 Bajista (< EMA 200)"
+            vol_emoji = "🐳 Confirmado (Inyección institucional)" if signal.volume_confirmed else "⚪ Normal"
             
             msg = (
                 f"📈 *ANÁLISIS TÉCNICO EN VIVO*\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"• *Par:* `{self.config.symbol}`\n"
                 f"• *Precio:* `${price:,.2f} USD`\n"
-                f"• *EMA {self.config.fast_ema}:* `${signal.fast_ema:,.2f}`\n"
-                f"• *EMA {self.config.slow_ema}:* `${signal.slow_ema:,.2f}`\n"
+                f"• *EMA {self.config.fast_ema} (Rápida):* `${signal.fast_ema:,.2f}`\n"
+                f"• *EMA {self.config.slow_ema} (Lenta):* `${signal.slow_ema:,.2f}`\n"
+                f"• *EMA 200 (Macro):* `${signal.ema_200:,.2f}` ({macro_emoji})\n"
                 f"• *RSI (14):* `{signal.rsi:.1f}` / 100\n"
+                f"• *Volumen Ballenas:* {vol_emoji}\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"• *Diagnóstico:* *{signal_emoji}*\n"
                 f"• *Detalle:* {signal.reason}"
@@ -663,26 +685,58 @@ class TelegramTradingBot:
                 balances = self.client.get_balances(base_curr, quote_curr)
                 quote_balance = balances[quote_curr]
 
-                # 1. Verificar salida de posición activa por TP / SL
+                # 1. Evaluar eventos de posición activa (Break-Even, TP1 parcial 50%, TP2 final, SL)
                 has_position = self.risk_mgr.active_position is not None
                 if has_position:
-                    should_exit, exit_reason, pnl_pct = self.risk_mgr.check_exit(current_price)
-                    if should_exit:
+                    event = self.risk_mgr.check_position_events(current_price)
+                    if event:
                         pos = self.risk_mgr.active_position
-                        order = self.client.create_market_sell_order(self.config.symbol, pos.amount, current_price)
-                        order["pnl"] = (current_price - pos.entry_price) * pos.amount
-                        self.risk_mgr.close_position()
-                        self.save_state()
+                        ev_type = event["event"]
+                        pnl_pct = event["pnl_pct"]
 
-                        emoji = "🎉 ¡TAKE PROFIT!" if pnl_pct > 0 else "🛡️ STOP LOSS"
-                        self.broadcast(
-                            f"{emoji} *ORDEN CERRADA AUTOMÁTICAMENTE*\n\n"
-                            f"• *Par:* `{self.config.symbol}`\n"
-                            f"• *Precio Salida:* `${current_price:,.2f}`\n"
-                            f"• *Resultado:* *{pnl_pct:+.2f}%*\n"
-                            f"• *Motivo:* {exit_reason}"
-                        )
-                        has_position = False
+                        # A) Evento BREAK-EVEN (Riesgo Cero activado al +1.2%)
+                        if ev_type == "BREAK_EVEN":
+                            self.save_state()
+                            self.broadcast(
+                                f"🛡️ *¡OPERACIÓN A RIESGO CERO (BREAK-EVEN)!*\n\n"
+                                f"• *Par:* `{self.config.symbol}`\n"
+                                f"• *Precio Actual:* `${current_price:,.2f}` (+{pnl_pct:.2f}%)\n"
+                                f"• *Nuevo Stop-Loss:* `${pos.stop_loss_price:,.2f}` (Precio Entrada)\n\n"
+                                f"🎉 *¡Esta operación ya no puede perder dinero! Solo ganar o empatar.*"
+                            )
+
+                        # B) Evento TP1 Parcial (+2.0% - Venta del 50% asegurada)
+                        elif ev_type == "TP1_PARTIAL":
+                            sell_amt = event["sell_amount"]
+                            order = self.client.create_market_sell_order(self.config.symbol, sell_amt, current_price)
+                            order["pnl"] = (current_price - pos.entry_price) * sell_amt
+                            self.save_state()
+                            self.broadcast(
+                                f"💰 *¡TAKE-PROFIT 1 ALCANZADO (+{pnl_pct:.2f}%)!*\n\n"
+                                f"• *Par:* `{self.config.symbol}`\n"
+                                f"• *Ganancia:* ¡El 50% de la posición fue vendido y asegurado en balance!\n"
+                                f"• *Cantidad restante:* `{pos.amount:.6f}`\n"
+                                f"• *Objetivo TP2:* `${pos.tp2_price:,.2f} (+6.0%)` con Stop-Loss en Break-Even."
+                            )
+
+                        # C) Salida Completa (TP2 final o Stop-Loss)
+                        elif ev_type == "FULL_EXIT":
+                            sell_amt = event["sell_amount"]
+                            order = self.client.create_market_sell_order(self.config.symbol, sell_amt, current_price)
+                            order["pnl"] = (current_price - pos.entry_price) * sell_amt
+                            reason = event["reason"]
+                            self.risk_mgr.close_position()
+                            self.save_state()
+
+                            emoji = "🎉 ¡OPERACIÓN CERRADA CON GANANCIA!" if pnl_pct > 0 else "🛡️ SALIDA DE PROTECCIÓN"
+                            self.broadcast(
+                                f"{emoji}\n\n"
+                                f"• *Par:* `{self.config.symbol}`\n"
+                                f"• *Precio Salida:* `${current_price:,.2f}`\n"
+                                f"• *Resultado Final:* *{pnl_pct:+.2f}%*\n"
+                                f"• *Motivo:* {reason}"
+                            )
+                            has_position = False
 
                     # 1.1 Si DCA está activo, verificar si amerita recompra escalonada
                     elif self.risk_mgr.dca_enabled:
@@ -701,30 +755,38 @@ class TelegramTradingBot:
                                 f"• *Nuevo Take-Profit:* `${pos.take_profit_price:,.2f}`"
                             )
 
-                # 2. Descargar velas y evaluar estrategia
-                df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=50)
+                # 2. Descargar velas con límite suficiente para calcular EMA 200 y volumen
+                df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=220)
                 signal = self.strategy.analyze(df, has_open_position=has_position)
 
-                # 3. Ejecutar compra si hay señal
-                if signal.action == "BUY" and not has_position:
-                    amount = self.risk_mgr.calculate_order_amount(quote_balance, current_price)
-                    if amount * current_price >= 10.0:
-                        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        self.client.create_market_buy_order(self.config.symbol, amount, current_price)
-                        self.risk_mgr.open_position(self.config.symbol, current_price, amount, now_str)
-                        self.save_state()
+                # 3. Comprobar pausa inteligente anti-revancha antes de comprar
+                in_cool, rem_mins = self.risk_mgr.is_in_cooldown()
 
-                        dca_text = " (Tramo inicial con DCA)" if self.risk_mgr.dca_enabled else ""
-                        self.broadcast(
-                            f"🟢 *¡NUEVA COMPRA AUTOMÁTICA!*{dca_text}\n\n"
-                            f"• *Par:* `{self.config.symbol}`\n"
-                            f"• *Precio:* `${current_price:,.2f}`\n"
-                            f"• *Cantidad:* `{amount:.6f}`\n"
-                            f"• *Inversión:* `${(amount * current_price):,.2f} USD`\n"
-                            f"• *Señal:* {signal.reason}\n\n"
-                            f"🎯 *Take-Profit:* `${(current_price * (1 + self.config.take_profit_pct/100)):,.2f}`\n"
-                            f"🛡️ *Stop-Loss:* `${(current_price * (1 - self.config.stop_loss_pct/100)):,.2f}`"
-                        )
+                # 4. Ejecutar compra si hay señal
+                if signal.action == "BUY" and not has_position:
+                    if in_cool:
+                        pass # En pausa inteligente tras pérdida previa
+                    else:
+                        amount = self.risk_mgr.calculate_order_amount(quote_balance, current_price)
+                        if amount * current_price >= 10.0:
+                            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            self.client.create_market_buy_order(self.config.symbol, amount, current_price)
+                            self.risk_mgr.open_position(self.config.symbol, current_price, amount, now_str)
+                            self.save_state()
+
+                            dca_text = " (Tramo inicial con DCA)" if self.risk_mgr.dca_enabled else ""
+                            self.broadcast(
+                                f"🟢 *¡NUEVA COMPRA AUTOMÁTICA!*{dca_text}\n\n"
+                                f"• *Par:* `{self.config.symbol}`\n"
+                                f"• *Precio:* `${current_price:,.2f}`\n"
+                                f"• *Cantidad:* `{amount:.6f}`\n"
+                                f"• *Inversión:* `${(amount * current_price):,.2f} USD`\n"
+                                f"• *Señal:* {signal.reason}\n\n"
+                                f"💰 *TP1 (50%):* `${(current_price * 1.02):,.2f} (+2.0%)`\n"
+                                f"🚀 *TP2 (50%):* `${(current_price * 1.06):,.2f} (+6.0%)`\n"
+                                f"🛡️ *Break-Even:* Se activa al +1.2%\n"
+                                f"🛡️ *Stop-Loss:* `${(current_price * 0.985):,.2f} (-1.5%)`"
+                            )
 
                 elif signal.action == "SELL" and has_position:
                     pos = self.risk_mgr.active_position

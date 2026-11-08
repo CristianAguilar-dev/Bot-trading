@@ -52,6 +52,8 @@ def generate_candlestick_chart(df: pd.DataFrame, symbol: str, timeframe: str,
     # 2. Medias Moviles
     ax_main.plot(df_plot.index, df_plot['fast_ema'], color='#38bdf8', linewidth=1.8, label=f'EMA {fast_ema} (Rápida)')
     ax_main.plot(df_plot.index, df_plot['slow_ema'], color='#f59e0b', linewidth=1.8, label=f'EMA {slow_ema} (Lenta)')
+    if 'ema_200' in df_plot.columns:
+        ax_main.plot(df_plot.index, df_plot['ema_200'], color='#a855f7', linewidth=1.5, linestyle=':', label='EMA 200 (Macro)')
 
     last_price = df_plot['close'].iloc[-1]
     ax_main.set_title(f"{symbol} ({timeframe}) | Último Precio: ${last_price:,.2f}", fontsize=13, fontweight='bold', color='#f8fafc', pad=10)

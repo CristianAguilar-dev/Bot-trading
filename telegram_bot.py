@@ -23,6 +23,9 @@ from strategy import EmaRsiStrategy
 from risk_manager import RiskManager, Position
 from exchange_client import ExchangeClient
 from backtester import Backtester
+from chart_generator import generate_candlestick_chart
+from market_sentiment import get_fear_and_greed_index
+from scanner import scan_multiple_cryptos
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "trading_state.json")
 
@@ -37,8 +40,8 @@ def start_health_server():
             html = (
                 "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Trading Bot 24/7</title></head>"
                 "<body style='font-family:sans-serif; text-align:center; padding-top:50px; background:#0f172a; color:#f8fafc;'>"
-                "<h1>🟢 Bot de Trading Operando 24/7 en la Nube</h1>"
-                "<p>Conectado a Telegram y procesando ordenes sin depender de tu PC.</p>"
+                "<h1>🟢 Bot de Trading Pro Operando 24/7 en la Nube</h1>"
+                "<p>Gráficos, Escáner Radar, DCA y Sentimiento de Mercado activos.</p>"
                 "</body></html>"
             )
             self.wfile.write(html.encode("utf-8"))
@@ -62,13 +65,12 @@ class TelegramTradingBot:
         self.base_url = f"https://api.telegram.org/bot{self.token}"
         self.config = BotConfig()
         
-        # Estado y persistencia
         self.authorized_chat_ids = set()
         self.is_trading_active = False
         self.trade_thread: Optional[threading.Thread] = None
+        self.digest_thread: Optional[threading.Thread] = None
         self.stop_signal = threading.Event()
         
-        # Clientes
         self.client = ExchangeClient(
             exchange_id=self.config.exchange_id,
             api_key=self.config.api_key,
@@ -81,7 +83,8 @@ class TelegramTradingBot:
             stop_loss_pct=self.config.stop_loss_pct,
             take_profit_pct=self.config.take_profit_pct,
             trailing_stop=self.config.trailing_stop,
-            max_position_pct=self.config.max_position_pct
+            max_position_pct=self.config.max_position_pct,
+            dca_enabled=False
         )
         self.strategy = EmaRsiStrategy(
             fast_ema=self.config.fast_ema,
@@ -93,9 +96,10 @@ class TelegramTradingBot:
         )
         
         self.load_state()
+        self._start_daily_digest_scheduler()
 
     def load_state(self):
-        """Carga el estado previo guardado (saldo, posiciones, chats autorizados)."""
+        """Carga el estado previo guardado."""
         if os.path.exists(STATE_FILE):
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -105,6 +109,8 @@ class TelegramTradingBot:
                         self.client.paper_balance = data["paper_balance"]
                     if "paper_history" in data:
                         self.client.paper_history = data["paper_history"]
+                    if "dca_enabled" in data:
+                        self.risk_mgr.dca_enabled = bool(data["dca_enabled"])
                     if data.get("active_position"):
                         p = data["active_position"]
                         self.risk_mgr.active_position = Position(
@@ -117,14 +123,16 @@ class TelegramTradingBot:
                             highest_price=p["highest_price"],
                             trailing_stop=p["trailing_stop"],
                             trailing_pct=p["trailing_pct"],
-                            opened_at=p["opened_at"]
+                            opened_at=p["opened_at"],
+                            dca_count=p.get("dca_count", 1),
+                            dca_enabled=p.get("dca_enabled", False)
                         )
-                    print(f"{Fore.GREEN}[OK] Estado anterior cargado correctamente desde disco.{Style.RESET_ALL}")
+                    print(f"{Fore.GREEN}[OK] Estado anterior cargado correctamente.{Style.RESET_ALL}")
             except Exception as e:
-                print(f"{Fore.RED}[WARN] No se pudo leer el estado anterior: {e}{Style.RESET_ALL}")
+                print(f"{Fore.RED}[WARN] No se pudo leer estado: {e}{Style.RESET_ALL}")
 
     def save_state(self):
-        """Guarda el estado actual en disco para que no se pierda nada al reiniciar."""
+        """Guarda el estado actual en disco."""
         try:
             pos_dict = None
             if self.risk_mgr.active_position:
@@ -139,13 +147,16 @@ class TelegramTradingBot:
                     "highest_price": p.highest_price,
                     "trailing_stop": p.trailing_stop,
                     "trailing_pct": p.trailing_pct,
-                    "opened_at": p.opened_at
+                    "opened_at": p.opened_at,
+                    "dca_count": p.dca_count,
+                    "dca_enabled": p.dca_enabled
                 }
 
             data = {
                 "authorized_chat_ids": list(self.authorized_chat_ids),
                 "paper_balance": self.client.paper_balance,
                 "paper_history": self.client.paper_history,
+                "dca_enabled": self.risk_mgr.dca_enabled,
                 "active_position": pos_dict
             }
             with open(STATE_FILE, "w", encoding="utf-8") as f:
@@ -156,7 +167,6 @@ class TelegramTradingBot:
     # ==================== COMUNICACIÓN TELEGRAM ====================
 
     def send_message(self, chat_id: int, text: str, reply_markup: Optional[Dict] = None):
-        """Envía un mensaje formateado a un chat de Telegram."""
         url = f"{self.base_url}/sendMessage"
         payload = {
             "chat_id": chat_id,
@@ -169,10 +179,21 @@ class TelegramTradingBot:
         try:
             requests.post(url, json=payload, timeout=8)
         except Exception as e:
-            print(f"{Fore.RED}[Telegram Error] Envio fallido: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}[Telegram Error] {e}{Style.RESET_ALL}")
+
+    def send_photo(self, chat_id: int, photo_bytes, caption: str = "", reply_markup: Optional[Dict] = None):
+        """Envía una imagen (gráfico) directamente al chat de Telegram."""
+        url = f"{self.base_url}/sendPhoto"
+        files = {"photo": ("chart.png", photo_bytes, "image/png")}
+        data = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+        if reply_markup:
+            data["reply_markup"] = json.dumps(reply_markup)
+        try:
+            requests.post(url, files=files, data=data, timeout=15)
+        except Exception as e:
+            print(f"{Fore.RED}[Telegram Photo Error] {e}{Style.RESET_ALL}")
 
     def answer_callback_query(self, callback_query_id: str, text: str = ""):
-        """Responde a un toque de botón inline."""
         url = f"{self.base_url}/answerCallbackQuery"
         try:
             requests.post(url, json={"callback_query_id": callback_query_id, "text": text}, timeout=5)
@@ -180,20 +201,21 @@ class TelegramTradingBot:
             pass
 
     def broadcast(self, text: str):
-        """Notifica a todos los usuarios autorizados en su móvil."""
         for cid in self.authorized_chat_ids:
             self.send_message(cid, text)
 
     # ==================== TECLADOS MÓVILES ====================
 
     def get_main_keyboard(self) -> Dict:
-        """Teclado táctil permanente en la pantalla del celular."""
+        """Teclado táctil completo con todas las nuevas mejoras."""
+        dca_text = "🎯 DCA: [ACTIVADO]" if self.risk_mgr.dca_enabled else "🎯 DCA: [DESACTIVADO]"
         return {
             "keyboard": [
                 [{"text": "📊 Mi Saldo & Estado"}, {"text": "📈 Precio & Señal"}],
+                [{"text": "📸 Ver Gráfico en Foto"}, {"text": "🦅 Escáner Radar"}],
                 [{"text": "🚀 Iniciar Trading"}, {"text": "⏹️ Pausar Trading"}],
-                [{"text": "📜 Historial"}, {"text": "🧪 Probar Backtest"}],
-                [{"text": "⚙️ Ajustes"}, {"text": "❓ Ayuda"}]
+                [{"text": "🧠 Miedo & Codicia"}, {"text": "☀️ Resumen Diario"}],
+                [{"text": "📜 Historial"}, {"text": "⚙️ Ajustes"}]
             ],
             "resize_keyboard": True,
             "is_persistent": True
@@ -202,26 +224,27 @@ class TelegramTradingBot:
     # ==================== CONTROLADORES DE ACCIÓN ====================
 
     def handle_start(self, chat_id: int, user_first_name: str):
-        """Da la bienvenida y autoriza al familiar."""
         self.authorized_chat_ids.add(chat_id)
         self.save_state()
         
         status_text = "🟢 ACTIVO" if self.is_trading_active else "⏸️ PAUSADO"
+        dca_badge = "Activado ✅" if self.risk_mgr.dca_enabled else "Desactivado ⚪"
         welcome_text = (
             f"👋 ¡Hola, *{user_first_name}*!\n\n"
-            f"Bienvenido a tu **Bot de Cripto Trading Móvil**.\n"
-            f"Este sistema opera de forma automática analizando el mercado con **Medias Móviles (EMA) y RSI**.\n\n"
-            f"📌 *Configuración Actual:*\n"
-            f"• *Modo:* `{self.config.bot_mode.upper()} (Simulación Segura)`\n"
-            f"• *Par:* `{self.config.symbol}`\n"
-            f"• *Temporalidad:* `{self.config.timeframe}`\n"
-            f"• *Estado:* {status_text}\n\n"
-            f"👇 *Toca los botones de abajo para controlar todo desde tu celular:*"
+            f"Bienvenido a tu **Bot de Cripto Trading Pro**.\n\n"
+            f"🌟 *Funciones Profesionales Activas:*\n"
+            f"• 📊 *Estrategia:* `EMA 9/21 + RSI Filter`\n"
+            f"• 📸 *Gráficos en Foto:* Velas japonesas en directo.\n"
+            f"• 🦅 *Escáner Radar:* Rastrea las 8 mejores monedas.\n"
+            f"• 🧠 *Sentimiento:* Índice oficial Fear & Greed.\n"
+            f"• 🎯 *Modo DCA:* {dca_badge}\n"
+            f"• ☀️ *Reporte:* Resumen diario matutino automático.\n\n"
+            f"📌 *Configuración:* `{self.config.symbol}` ({self.config.timeframe}) | {status_text}\n\n"
+            f"👇 *Toca los botones táctiles abajo para operar:*"
         )
         self.send_message(chat_id, welcome_text, reply_markup=self.get_main_keyboard())
 
     def handle_status(self, chat_id: int):
-        """Muestra el saldo, precio actual y posición abierta."""
         base_curr, quote_curr = self.config.symbol.split('/')
         try:
             price = self.client.fetch_current_price(self.config.symbol)
@@ -233,16 +256,17 @@ class TelegramTradingBot:
             return
 
         status_icon = "🟢 ACTIVO (Operando)" if self.is_trading_active else "⏸️ PAUSADO"
-        
+        dca_badge = "✅ Activado" if self.risk_mgr.dca_enabled else "⚪ Desactivado"
+
         msg = [
             f"📊 *ESTADO GENERAL DEL BOT*",
             f"━━━━━━━━━━━━━━━━━━",
             f"• *Estado:* `{status_icon}`",
-            f"• *Exchange:* `{self.config.exchange_id.upper()}`",
-            f"• *Par:* `{self.config.symbol}`",
-            f"• *Precio Actual:* `${price:,.2f} USD`",
+            f"• *Par Activo:* `{self.config.symbol}`",
+            f"• *Precio:* `${price:,.2f} USD`",
             f"• *Saldo USDT:* `${quote_bal:,.2f}`",
             f"• *Saldo Crypto:* `{crypto_bal:.6f} {base_curr}`",
+            f"• *Estrategia DCA:* {dca_badge}",
             f"━━━━━━━━━━━━━━━━━━"
         ]
 
@@ -252,26 +276,145 @@ class TelegramTradingBot:
             pnl_pct = ((price - pos.entry_price) / pos.entry_price) * 100.0
             pnl_val = (price - pos.entry_price) * pos.amount
             emoji_pnl = "🟢 +" if pnl_pct >= 0 else "🔴 "
-            
+            dca_info = f" (Compras DCA: {pos.dca_count})" if pos.dca_count > 1 else ""
+
             msg.extend([
-                f"🎯 *POSICIÓN ABIERTA ACTIVA:*",
-                f"• *Precio de Entrada:* `${pos.entry_price:,.2f}`",
-                f"• *Ganancia/Pérdida (PnL):* {emoji_pnl}*{pnl_val:+.2f} USD ({pnl_pct:+.2f}%)*",
+                f"🎯 *POSICIÓN ABIERTA ACTIVA{dca_info}:*",
+                f"• *Precio Entrada:* `${pos.entry_price:,.2f}`",
+                f"• *PnL en Vivo:* {emoji_pnl}*{pnl_val:+.2f} USD ({pnl_pct:+.2f}%)*",
                 f"• *Take-Profit:* `${pos.take_profit_price:,.2f} (+{self.config.take_profit_pct}%)`",
                 f"• *Stop-Loss:* `${pos.stop_loss_price:,.2f} (-{self.config.stop_loss_pct}%)`",
                 f"• *Abierta el:* `{pos.opened_at}`"
             ])
-            inline_buttons.append([{"text": "⚡ Cerrar Posición Ahora (Vender)", "callback_data": "force_sell"}])
+            inline_buttons.append([{"text": "⚡ Cerrar Posición Ahora", "callback_data": "force_sell"}])
         else:
-            msg.append("💤 *Sin posición abierta en este momento.* Buscando oportunidad de compra...")
+            msg.append("💤 *Sin posición abierta.* Escaneando el mercado...")
 
-        inline_buttons.append([{"text": "🔄 Actualizar", "callback_data": "refresh_status"}])
+        inline_buttons.append([
+            {"text": "🔄 Actualizar", "callback_data": "refresh_status"},
+            {"text": "📸 Ver Gráfico", "callback_data": "get_chart"}
+        ])
         reply_markup = {"inline_keyboard": inline_buttons}
         self.send_message(chat_id, "\n".join(msg), reply_markup=reply_markup)
 
+    def handle_chart(self, chat_id: int):
+        """Genera y envía el gráfico de velas y EMAs como una foto."""
+        self.send_message(chat_id, f"🎨 Generando gráfico profesional de *{self.config.symbol}* ({self.config.timeframe})...")
+        try:
+            df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=50)
+            img_buf = generate_candlestick_chart(
+                df, self.config.symbol, self.config.timeframe,
+                self.config.fast_ema, self.config.slow_ema, self.config.rsi_period
+            )
+            caption = (
+                f"📊 *Gráfico en Vivo: {self.config.symbol} ({self.config.timeframe})*\n"
+                f"• Azul: EMA {self.config.fast_ema} | Naranja: EMA {self.config.slow_ema}\n"
+                f"• Púrpura: RSI ({self.config.rsi_period})"
+            )
+            self.send_photo(chat_id, img_buf, caption=caption)
+        except Exception as e:
+            self.send_message(chat_id, f"❌ Error generando gráfico: `{e}`")
+
+    def handle_scanner(self, chat_id: int):
+        """Escanea las mejores 8 criptomonedas y muestra las mejores señales."""
+        self.send_message(chat_id, "🦅 *Escáner Radar activado...* Analizando el TOP de criptomonedas en tiempo real...")
+        try:
+            results = scan_multiple_cryptos(self.client, timeframe=self.config.timeframe, strategy=self.strategy)
+            
+            lines = [
+                f"🦅 *RADAR DE OPORTUNIDADES ({self.config.timeframe})*",
+                f"━━━━━━━━━━━━━━━━━━"
+            ]
+
+            buy_buttons = []
+            for r in results:
+                icon = "🟢 COMPRA" if r["action"] == "BUY" else ("🔴 VENTA" if r["action"] == "SELL" else "⚪ NEUTRAL")
+                lines.append(
+                    f"*{r['symbol']}* | `${r['price']:,.2f}`\n"
+                    f"• Señal: *{icon}* (RSI: `{r['rsi']:.1f}`)\n"
+                    f"• {r['reason'][:45]}...\n"
+                )
+                if r["action"] == "BUY":
+                    buy_buttons.append([{"text": f"🎯 Cambiar y Operar {r['symbol']}", "callback_data": f"set_pair_{r['symbol']}"}])
+
+            lines.append("━━━━━━━━━━━━━━━━━━")
+            lines.append("💡 *Tip:* Las monedas con 🟢 COMPRA tienen cruce favorable de medias.")
+
+            reply_markup = {"inline_keyboard": buy_buttons} if buy_buttons else None
+            self.send_message(chat_id, "\n".join(lines), reply_markup=reply_markup)
+        except Exception as e:
+            self.send_message(chat_id, f"❌ Error en escáner: `{e}`")
+
+    def handle_sentiment(self, chat_id: int):
+        """Muestra el índice Fear & Greed oficial del mercado."""
+        fng = get_fear_and_greed_index()
+        val = fng["value"]
+        
+        # Barra visual
+        filled = int(val / 10)
+        bar = "🟩" * filled + "⬜" * (10 - filled)
+
+        msg = (
+            f"🧠 *ÍNDICE DE MIEDO Y CODICIA (FEAR & GREED)*\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"• *Puntuación:* `{val} / 100`\n"
+            f"• *Nivel:* {bar}\n"
+            f"• *Diagnóstico:* *{fng['status']}*\n\n"
+            f"📌 *Estrategia del Bot:* \n{fng['advice']}\n"
+            f"━━━━━━━━━━━━━━━━━━"
+        )
+        self.send_message(chat_id, msg)
+
+    def handle_daily_digest(self, chat_id: int):
+        """Genera el reporte matutino / diario."""
+        history = self.client.paper_history
+        total_trades = len(history)
+        
+        wins = 0
+        losses = 0
+        total_pnl = 0.0
+
+        for t in history:
+            if "pnl" in t:
+                p = t["pnl"]
+                total_pnl += p
+                if p > 0:
+                    wins += 1
+                else:
+                    losses += 1
+
+        base_curr, quote_curr = self.config.symbol.split('/')
+        balances = self.client.get_balances(base_curr, quote_curr)
+        quote_bal = balances[quote_curr]
+
+        pnl_emoji = "🟢 +" if total_pnl >= 0 else "🔴 "
+        msg = (
+            f"☀️ *REPORTE DIARIO DE RENDIMIENTO*\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"• *Saldo Actual:* `${quote_bal:,.2f} USDT`\n"
+            f"• *Total Operaciones:* `{total_trades}`\n"
+            f"• *Victorias:* `{wins}` | *Derrotas:* `{losses}`\n"
+            f"• *Ganancia Neta Acumulada:* {pnl_emoji}*${total_pnl:+.2f} USD*\n"
+            f"• *Estado del Robot:* `{'🟢 Operando' if self.is_trading_active else '⏸️ Pausado'}`\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"¡Que tengas un excelente día de trading! 🚀"
+        )
+        self.send_message(chat_id, msg)
+
+    def handle_toggle_dca(self, chat_id: int):
+        """Activa o desactiva las compras escalonadas (DCA)."""
+        self.risk_mgr.dca_enabled = not self.risk_mgr.dca_enabled
+        self.save_state()
+        state_str = "ACTIVADO ✅" if self.risk_mgr.dca_enabled else "DESACTIVADO ⚪"
+        expl = (
+            "Ahora el bot dividirá la inversión y hará una recompra más abajo si el precio cae, para promediar a la baja y ganar en el rebote."
+            if self.risk_mgr.dca_enabled else
+            "Ahora el bot operará con entrada simple y Stop-Loss estricto estándar."
+        )
+        self.send_message(chat_id, f"🎯 *Modo DCA {state_str}*\n\n{expl}", reply_markup=self.get_main_keyboard())
+
     def handle_price_and_signal(self, chat_id: int):
-        """Analiza la vela actual y emite la recomendación de la estrategia."""
-        self.send_message(chat_id, f"⏳ Analizando mercado en vivo para `{self.config.symbol}` ({self.config.timeframe})...")
+        self.send_message(chat_id, f"⏳ Analizando mercado en vivo para `{self.config.symbol}`...")
         try:
             df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=50)
             price = self.client.fetch_current_price(self.config.symbol)
@@ -285,21 +428,21 @@ class TelegramTradingBot:
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"• *Par:* `{self.config.symbol}`\n"
                 f"• *Precio:* `${price:,.2f} USD`\n"
-                f"• *EMA {self.config.fast_ema} (Rápida):* `${signal.fast_ema:,.2f}`\n"
-                f"• *EMA {self.config.slow_ema} (Lenta):* `${signal.slow_ema:,.2f}`\n"
+                f"• *EMA {self.config.fast_ema}:* `${signal.fast_ema:,.2f}`\n"
+                f"• *EMA {self.config.slow_ema}:* `${signal.slow_ema:,.2f}`\n"
                 f"• *RSI (14):* `{signal.rsi:.1f}` / 100\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"• *Diagnóstico:* *{signal_emoji}*\n"
                 f"• *Detalle:* {signal.reason}"
             )
-            self.send_message(chat_id, msg)
+            markup = {"inline_keyboard": [[{"text": "📸 Ver en Gráfico con Foto", "callback_data": "get_chart"}]]}
+            self.send_message(chat_id, msg, reply_markup=markup)
         except Exception as e:
-            self.send_message(chat_id, f"❌ Error al analizar: `{e}`")
+            self.send_message(chat_id, f"❌ Error: `{e}`")
 
     def handle_start_trading(self, chat_id: int):
-        """Inicia el ciclo automático en segundo plano."""
         if self.is_trading_active:
-            self.send_message(chat_id, "⚠️ El bot *ya se encuentra activo y operando* en segundo plano.")
+            self.send_message(chat_id, "⚠️ El bot *ya se encuentra activo y operando*.")
             return
 
         self.is_trading_active = True
@@ -309,128 +452,77 @@ class TelegramTradingBot:
         
         self.send_message(
             chat_id,
-            f"🚀 *¡TRADING INICIADO!*\n\n"
-            f"El bot está ahora monitoreando `{self.config.symbol}` cada 15 segundos.\n"
-            f"Te enviará una alerta automática a tu celular cada vez que compre o venda.",
+            f"🚀 *¡TRADING AUTOMÁTICO INICIADO!*\n\n"
+            f"Monitoreando `{self.config.symbol}` cada 15 segundos con DCA={self.risk_mgr.dca_enabled}.\n"
+            f"Recibirás alertas con sonido en tu móvil cuando compre o venda.",
             reply_markup=self.get_main_keyboard()
         )
 
     def handle_pause_trading(self, chat_id: int):
-        """Pausa el ciclo automático."""
         if not self.is_trading_active:
             self.send_message(chat_id, "ℹ️ El bot ya está pausado.")
             return
 
         self.is_trading_active = False
         self.stop_signal.set()
-        self.send_message(chat_id, "⏸️ *Bot Pausado.* Ya no abrirá nuevas operaciones automáticas hasta que lo vuelvas a iniciar.")
+        self.send_message(chat_id, "⏸️ *Bot Pausado.* Se detuvo la apertura de nuevas operaciones automáticas.")
 
     def handle_history(self, chat_id: int):
-        """Muestra las últimas operaciones ejecutadas."""
         history = self.client.paper_history
         if not history:
-            self.send_message(chat_id, "📜 *Aún no hay operaciones registradas en el historial.*")
+            self.send_message(chat_id, "📜 *Aún no hay operaciones registradas.*")
             return
 
-        msg = ["📜 *HISTORIAL RECIENTE DE OPERACIONES:*", "━━━━━━━━━━━━━━━━━━"]
+        msg = ["📜 *HISTORIAL DE OPERACIONES RECIENTES:*", "━━━━━━━━━━━━━━━━━━"]
         for o in history[-6:]:
             side_icon = "🟢 COMPRA" if o['side'] == 'buy' else "🔴 VENTA"
-            cost_str = f"${o.get('cost', 0):,.2f} USD"
-            msg.append(f"{side_icon} | Cantidad: `{o['amount']:.5f}` | Precio: `${o['price']:,.2f}` ({cost_str})")
+            pnl_tag = f" | PnL: `{o['pnl']:+.2f}`" if "pnl" in o else ""
+            msg.append(f"{side_icon} | `{o['amount']:.5f}` @ `${o['price']:,.2f}`{pnl_tag}")
         
         msg.append("━━━━━━━━━━━━━━━━━━")
         self.send_message(chat_id, "\n".join(msg))
 
-    def handle_backtest_prompt(self, chat_id: int):
-        """Envía opciones para hacer backtesting rápido con botones inline."""
-        markup = {
-            "inline_keyboard": [
-                [
-                    {"text": "📊 Bitcoin (BTC/USDT)", "callback_data": "bt_BTC/USDT"},
-                    {"text": "📊 Ethereum (ETH/USDT)", "callback_data": "bt_ETH/USDT"}
-                ],
-                [
-                    {"text": "📊 Solana (SOL/USDT)", "callback_data": "bt_SOL/USDT"},
-                    {"text": "📊 Dogecoin (DOGE/USDT)", "callback_data": "bt_DOGE/USDT"}
-                ]
-            ]
-        }
-        self.send_message(chat_id, "🧪 *Elige una moneda para probar la estrategia con datos reales históricos:*", reply_markup=markup)
-
-    def run_backtest_for_chat(self, chat_id: int, symbol: str):
-        self.send_message(chat_id, f"⏳ Descargando velas históricas de *{symbol}* (1h) y simulando... Por favor espera unos segundos.")
-        try:
-            df = self.client.fetch_ohlcv(symbol, timeframe="1h", limit=300)
-            bt = Backtester(
-                initial_balance=self.config.initial_balance,
-                fast_ema=self.config.fast_ema,
-                slow_ema=self.config.slow_ema,
-                rsi_period=self.config.rsi_period,
-                rsi_buy_threshold=self.config.rsi_buy_threshold,
-                rsi_overbought=self.config.rsi_overbought,
-                rsi_oversold=self.config.rsi_oversold,
-                stop_loss_pct=self.config.stop_loss_pct,
-                take_profit_pct=self.config.take_profit_pct,
-                trailing_stop=self.config.trailing_stop,
-                max_position_pct=self.config.max_position_pct
-            )
-            res = bt.run(df)
-            
-            pnl_emoji = "🟢 +" if res['total_return_pct'] >= 0 else "🔴 "
-            report = (
-                f"📊 *RESULTADOS BACKTEST: {symbol} (1h)*\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"• *Período:* Últimas 300 velas (12 días)\n"
-                f"• *Saldo Inicial:* `${res['initial_balance']:,.2f} USDT`\n"
-                f"• *Saldo Final:* `${res['final_balance']:,.2f} USDT`\n"
-                f"• *Ganancia Neta:* {pnl_emoji}*${res['total_pnl']:+,.2f} ({res['total_return_pct']:+.2f}%)*\n"
-                f"• *Mercado Pasivo (Buy & Hold):* `{res['buy_hold_pct']:+.2f}%`\n"
-                f"• *Operaciones Totales:* `{res['total_trades']}` (Ganadas: {res['wins']} | Perdidas: {res['losses']})\n"
-                f"• *Tasa de Acierto:* `{res['win_rate']:.1f}%`\n"
-                f"• *Drawdown Máximo:* `{res['max_drawdown_pct']:.2f}%`\n"
-                f"━━━━━━━━━━━━━━━━━━"
-            )
-            self.send_message(chat_id, report)
-        except Exception as e:
-            self.send_message(chat_id, f"❌ Error en backtest: `{e}`")
-
     def handle_settings(self, chat_id: int):
-        """Muestra opciones para cambiar par o temporalidad."""
+        dca_text = "🎯 Desactivar DCA" if self.risk_mgr.dca_enabled else "🎯 Activar DCA (Recompras)"
         markup = {
             "inline_keyboard": [
                 [
-                    {"text": "🪙 Cambiar a BTC", "callback_data": "set_pair_BTC/USDT"},
-                    {"text": "🪙 Cambiar a ETH", "callback_data": "set_pair_ETH/USDT"},
-                    {"text": "🪙 Cambiar a SOL", "callback_data": "set_pair_SOL/USDT"}
+                    {"text": "🪙 Bitcoin", "callback_data": "set_pair_BTC/USDT"},
+                    {"text": "🪙 Ethereum", "callback_data": "set_pair_ETH/USDT"},
+                    {"text": "🪙 Solana", "callback_data": "set_pair_SOL/USDT"}
                 ],
                 [
-                    {"text": "⏱️ Marco 15m", "callback_data": "set_tf_15m"},
-                    {"text": "⏱️ Marco 1h", "callback_data": "set_tf_1h"},
-                    {"text": "⏱️ Marco 4h", "callback_data": "set_tf_4h"}
+                    {"text": "⏱️ Velas 15m", "callback_data": "set_tf_15m"},
+                    {"text": "⏱️ Velas 1h", "callback_data": "set_tf_1h"},
+                    {"text": "⏱️ Velas 4h", "callback_data": "set_tf_4h"}
+                ],
+                [
+                    {"text": dca_text, "callback_data": "toggle_dca"}
                 ]
             ]
         }
         text = (
-            f"⚙️ *AJUSTES DEL BOT*\n\n"
+            f"⚙️ *PANEL DE AJUSTES*\n\n"
             f"• *Par activo:* `{self.config.symbol}`\n"
             f"• *Temporalidad:* `{self.config.timeframe}`\n"
-            f"• *Stop-Loss:* `{self.config.stop_loss_pct}%`\n"
-            f"• *Take-Profit:* `{self.config.take_profit_pct}%`\n\n"
-            f"👇 *Toca un botón para cambiar la configuración:*"
+            f"• *Estrategia DCA:* `{'ACTIVADA' if self.risk_mgr.dca_enabled else 'DESACTIVADA'}`\n"
+            f"• *Take-Profit:* `{self.config.take_profit_pct}%`\n"
+            f"• *Stop-Loss:* `{self.config.stop_loss_pct}%`\n\n"
+            f"👇 *Toca un botón para cambiar opciones:*"
         )
         self.send_message(chat_id, text, reply_markup=markup)
 
     def handle_force_sell(self, chat_id: int):
-        """Cierre manual de emergencia solicitado por el usuario desde el celular."""
         if not self.risk_mgr.active_position:
-            self.send_message(chat_id, "ℹ️ No tienes ninguna posición abierta actualmente.")
+            self.send_message(chat_id, "ℹ️ No hay ninguna posición abierta.")
             return
 
         try:
             pos = self.risk_mgr.active_position
             price = self.client.fetch_current_price(pos.symbol)
             pnl_pct = ((price - pos.entry_price) / pos.entry_price) * 100.0
-            self.client.create_market_sell_order(pos.symbol, pos.amount, price)
+            order = self.client.create_market_sell_order(pos.symbol, pos.amount, price)
+            order["pnl"] = (price - pos.entry_price) * pos.amount
             self.risk_mgr.close_position()
             self.save_state()
             
@@ -444,14 +536,26 @@ class TelegramTradingBot:
                 f"• *Motivo:* Orden manual desde el celular."
             )
         except Exception as e:
-            self.send_message(chat_id, f"❌ Error ejecutando venta manual: `{e}`")
+            self.send_message(chat_id, f"❌ Error ejecutando venta: `{e}`")
+
+    # ==================== SCHEDULER REPORTE DIARIO ====================
+
+    def _start_daily_digest_scheduler(self):
+        """Hilo para enviar el reporte cada 24 horas."""
+        def digest_loop():
+            while True:
+                time.sleep(86400) # 24 horas
+                for cid in self.authorized_chat_ids:
+                    self.handle_daily_digest(cid)
+
+        self.digest_thread = threading.Thread(target=digest_loop, daemon=True)
+        self.digest_thread.start()
 
     # ==================== CICLO DE TRADING AUTOMÁTICO ====================
 
     def _trading_loop(self):
-        """Hilo en segundo plano que monitorea velas y ejecuta órdenes."""
         base_curr, quote_curr = self.config.symbol.split('/')
-        print(f"{Fore.GREEN}[TRADING] Ciclo en segundo plano iniciado para {self.config.symbol}.{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}[TRADING] Ciclo continuo iniciado para {self.config.symbol}.{Style.RESET_ALL}")
 
         while not self.stop_signal.is_set():
             try:
@@ -459,13 +563,14 @@ class TelegramTradingBot:
                 balances = self.client.get_balances(base_curr, quote_curr)
                 quote_balance = balances[quote_curr]
 
-                # 1. Comprobar salida de posición activa por TP / SL
+                # 1. Verificar salida de posición activa por TP / SL
                 has_position = self.risk_mgr.active_position is not None
                 if has_position:
                     should_exit, exit_reason, pnl_pct = self.risk_mgr.check_exit(current_price)
                     if should_exit:
                         pos = self.risk_mgr.active_position
-                        self.client.create_market_sell_order(self.config.symbol, pos.amount, current_price)
+                        order = self.client.create_market_sell_order(self.config.symbol, pos.amount, current_price)
+                        order["pnl"] = (current_price - pos.entry_price) * pos.amount
                         self.risk_mgr.close_position()
                         self.save_state()
 
@@ -478,6 +583,23 @@ class TelegramTradingBot:
                             f"• *Motivo:* {exit_reason}"
                         )
                         has_position = False
+
+                    # 1.1 Si DCA está activo, verificar si amerita recompra escalonada
+                    elif self.risk_mgr.dca_enabled:
+                        should_dca, dca_amt = self.risk_mgr.check_dca_opportunity(current_price, quote_balance)
+                        if should_dca:
+                            self.client.create_market_buy_order(self.config.symbol, dca_amt, current_price)
+                            self.risk_mgr.apply_dca_buy(dca_amt, current_price)
+                            self.save_state()
+                            pos = self.risk_mgr.active_position
+                            self.broadcast(
+                                f"🎯 *RECOMPRA ESCALONADA (DCA) EJECUTADA*\n\n"
+                                f"• *Par:* `{self.config.symbol}`\n"
+                                f"• *Precio Recompra:* `${current_price:,.2f}`\n"
+                                f"• *Nuevo Precio Promedio:* `${pos.entry_price:,.2f}`\n"
+                                f"• *Cantidad Total:* `{pos.amount:.6f}`\n"
+                                f"• *Nuevo Take-Profit:* `${pos.take_profit_price:,.2f}`"
+                            )
 
                 # 2. Descargar velas y evaluar estrategia
                 df = self.client.fetch_ohlcv(self.config.symbol, timeframe=self.config.timeframe, limit=50)
@@ -492,8 +614,9 @@ class TelegramTradingBot:
                         self.risk_mgr.open_position(self.config.symbol, current_price, amount, now_str)
                         self.save_state()
 
+                        dca_text = " (Tramo inicial con DCA)" if self.risk_mgr.dca_enabled else ""
                         self.broadcast(
-                            f"🟢 *¡NUEVA COMPRA AUTOMÁTICA!*\n\n"
+                            f"🟢 *¡NUEVA COMPRA AUTOMÁTICA!*{dca_text}\n\n"
                             f"• *Par:* `{self.config.symbol}`\n"
                             f"• *Precio:* `${current_price:,.2f}`\n"
                             f"• *Cantidad:* `{amount:.6f}`\n"
@@ -506,7 +629,8 @@ class TelegramTradingBot:
                 elif signal.action == "SELL" and has_position:
                     pos = self.risk_mgr.active_position
                     pnl_pct = ((current_price - pos.entry_price) / pos.entry_price) * 100.0
-                    self.client.create_market_sell_order(self.config.symbol, pos.amount, current_price)
+                    order = self.client.create_market_sell_order(self.config.symbol, pos.amount, current_price)
+                    order["pnl"] = (current_price - pos.entry_price) * pos.amount
                     self.risk_mgr.close_position()
                     self.save_state()
 
@@ -521,14 +645,11 @@ class TelegramTradingBot:
             except Exception as e:
                 print(f"{Fore.RED}[WARN Loop] {e}{Style.RESET_ALL}")
 
-            # Esperar 15 segundos entre chequeos
             self.stop_signal.wait(timeout=15)
 
     # ==================== RECEPCIÓN DE MENSAJES (LONG POLLING) ====================
 
     def process_update(self, update: Dict[str, Any]):
-        """Procesa cada mensaje o click de botón recibido desde Telegram."""
-        # Manejo de botones inline
         if "callback_query" in update:
             cq = update["callback_query"]
             cid = cq["message"]["chat"]["id"]
@@ -537,11 +658,12 @@ class TelegramTradingBot:
 
             if data == "refresh_status":
                 self.handle_status(cid)
+            elif data == "get_chart":
+                self.handle_chart(cid)
             elif data == "force_sell":
                 self.handle_force_sell(cid)
-            elif data.startswith("bt_"):
-                sym = data.replace("bt_", "")
-                self.run_backtest_for_chat(cid, sym)
+            elif data == "toggle_dca":
+                self.handle_toggle_dca(cid)
             elif data.startswith("set_pair_"):
                 self.config.symbol = data.replace("set_pair_", "")
                 self.send_message(cid, f"✅ Par actualizado a *{self.config.symbol}*")
@@ -550,7 +672,6 @@ class TelegramTradingBot:
                 self.send_message(cid, f"✅ Temporalidad actualizada a *{self.config.timeframe}*")
             return
 
-        # Manejo de texto y comandos
         if "message" in update and "text" in update["message"]:
             msg = update["message"]
             cid = msg["chat"]["id"]
@@ -563,35 +684,41 @@ class TelegramTradingBot:
                 self.handle_status(cid)
             elif text in ("📈 Precio & Señal", "/precio", "/signal"):
                 self.handle_price_and_signal(cid)
+            elif text in ("📸 Ver Gráfico en Foto", "/chart", "/grafico"):
+                self.handle_chart(cid)
+            elif text in ("🦅 Escáner Radar", "/radar", "/scan"):
+                self.handle_scanner(cid)
+            elif text in ("🧠 Miedo & Codicia", "/fng", "/sentimiento"):
+                self.handle_sentiment(cid)
+            elif text in ("☀️ Resumen Diario", "/reporte", "/digest"):
+                self.handle_daily_digest(cid)
             elif text in ("🚀 Iniciar Trading", "/iniciar", "/start_trade"):
                 self.handle_start_trading(cid)
             elif text in ("⏹️ Pausar Trading", "/pausar", "/stop_trade"):
                 self.handle_pause_trading(cid)
             elif text in ("📜 Historial", "/historial"):
                 self.handle_history(cid)
-            elif text in ("🧪 Probar Backtest", "/backtest"):
-                self.handle_backtest_prompt(cid)
             elif text in ("⚙️ Ajustes", "/ajustes", "/config"):
                 self.handle_settings(cid)
             elif text in ("❓ Ayuda", "/ayuda", "/help"):
                 help_text = (
-                    f"📖 *GUÍA RÁPIDA DE USO*\n\n"
-                    f"• *📊 Mi Saldo:* Muestra tus fondos y si hay operaciones abiertas.\n"
-                    f"• *🚀 Iniciar:* Activa el robot para que busque compras y ventas 24/7.\n"
-                    f"• *⏹️ Pausar:* Detiene temporalmente las compras automáticas.\n"
-                    f"• *📈 Precio & Señal:* Consulta qué recomienda el indicador EMA+RSI ahora.\n"
-                    f"• *🧪 Backtest:* Prueba cómo habría rendido la estrategia en los últimos días.\n"
-                    f"• *⚙️ Ajustes:* Cambia entre BTC, ETH o SOL y el tiempo de las velas."
+                    f"📖 *GUÍA COMPLETA DE COMANDOS PRO*\n\n"
+                    f"• *📊 Mi Saldo:* Muestra tus USDT y posición activa.\n"
+                    f"• *📸 Ver Gráfico:* Te envía una foto de velas japonesas y EMAs.\n"
+                    f"• *🦅 Escáner:* Revisa las 8 mejores criptos para encontrar compras.\n"
+                    f"• *🧠 Miedo & Codicia:* Consulta el termómetro general de mercado.\n"
+                    f"• *☀️ Resumen Diario:* Ganancias acumuladas de las últimas 24h.\n"
+                    f"• *🚀 Iniciar / ⏹️ Pausar:* Control del bot autónomo.\n"
+                    f"• *⚙️ Ajustes:* Cambia entre BTC, ETH, SOL o activa modo DCA."
                 )
                 self.send_message(cid, help_text)
             else:
-                self.send_message(cid, f"🤖 No reconocí ese comando. Usa los botones táctiles de abajo 👇", reply_markup=self.get_main_keyboard())
+                self.send_message(cid, f"🤖 No reconocí ese comando. Usa los botones táctiles abajo 👇", reply_markup=self.get_main_keyboard())
 
     def start_polling(self):
-        """Inicia la escucha de mensajes continua."""
         print(f"\n{Fore.CYAN}===================================================================={Style.RESET_ALL}")
-        print(f"{Fore.GREEN}{Style.BRIGHT}     📱 TELEGRAM MOBILE CONTROLLER INICIADO (100% OPERATIVO)     {Style.RESET_ALL}")
-        print(f"  {Fore.WHITE}Dile a tu familiar que abra el bot en Telegram y pulse {Fore.YELLOW}/start{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}{Style.BRIGHT}     📱 TELEGRAM PRO CONTROLLER INICIADO (TODAS LAS MEJORAS)     {Style.RESET_ALL}")
+        print(f"  {Fore.WHITE}Gráficos, Escáner Radar, DCA y Sentimiento 100% operativos.{Style.RESET_ALL}")
         print(f"{Fore.CYAN}===================================================================={Style.RESET_ALL}\n")
 
         offset = 0
@@ -605,7 +732,7 @@ class TelegramTradingBot:
                         offset = update["update_id"] + 1
                         self.process_update(update)
                 elif resp.status_code == 401:
-                    print(f"{Fore.RED}[ERROR] El Token de Telegram es inválido. Revisa tu archivo .env{Style.RESET_ALL}")
+                    print(f"{Fore.RED}[ERROR] El Token de Telegram es inválido.{Style.RESET_ALL}")
                     time.sleep(10)
                 else:
                     time.sleep(2)
@@ -626,7 +753,6 @@ def main():
         if not token:
             print(f"{Fore.RED}Token no proporcionado. Saliendo...{Style.RESET_ALL}")
             sys.exit(1)
-        # Guardar en .env para la próxima vez
         env_path = os.path.join(os.path.dirname(__file__), ".env")
         try:
             with open(env_path, "a", encoding="utf-8") as f:

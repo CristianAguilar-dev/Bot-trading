@@ -28,6 +28,14 @@ from market_sentiment import get_fear_and_greed_index
 from scanner import scan_multiple_cryptos
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "trading_state.json")
+DEBUG_LOGS = []
+
+def log_debug(msg: str):
+    entry = f"[{datetime.now().strftime('%H:%M:%S')}] {msg}"
+    print(f"[DEBUG] {entry}")
+    DEBUG_LOGS.append(entry)
+    if len(DEBUG_LOGS) > 40:
+        DEBUG_LOGS.pop(0)
 
 class CloudServerHandler(http.server.BaseHTTPRequestHandler):
     """Servidor HTTP de alto rendimiento: sirve la Academia Web, atiende pings 24/7 y procesa Webhooks de Telegram."""
@@ -48,6 +56,23 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
                 "timestamp": datetime.now().isoformat()
             }
             self.wfile.write(json.dumps(resp_data).encode("utf-8"))
+            return
+
+        # 1.1 Endpoint de depuración en vivo para verificar recepción de eventos en la nube
+        if self.path in ("/debug", "/logs", "/status-details"):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            info = {
+                "server_time": datetime.now().isoformat(),
+                "trading_active": self.bot_instance.is_trading_active if self.bot_instance else False,
+                "symbol": self.bot_instance.config.symbol if self.bot_instance else "None",
+                "exchange": self.bot_instance.config.exchange_id if self.bot_instance else "None",
+                "chat_ids": list(self.bot_instance.authorized_chat_ids) if self.bot_instance else [],
+                "recent_logs": DEBUG_LOGS[-25:]
+            }
+            self.wfile.write(json.dumps(info, indent=2).encode("utf-8"))
             return
 
         # 2. Servir la Academia de Trading Web
@@ -71,7 +96,7 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         # 3. Endpoint de Webhook para Telegram (hace que cada mensaje de Telegram opere directamente en Render)
-        if self.path in ("/webhook", "/telegram-webhook"):
+        if self.path.startswith("/webhook") or self.path.startswith("/telegram-webhook"):
             try:
                 content_length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(content_length)
@@ -84,10 +109,12 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
 
                 if self.bot_instance and body:
                     update_data = json.loads(body.decode("utf-8"))
+                    up_id = update_data.get("update_id", "N/A")
+                    log_debug(f"Webhook update id={up_id} recibido")
                     # Despachar procesamiento en un hilo independiente para velocidad máxima
                     threading.Thread(target=self.bot_instance.process_update, args=(update_data,), daemon=True).start()
             except Exception as e:
-                print(f"[Webhook Error] {e}")
+                log_debug(f"Webhook Error: {e}")
         else:
             self.send_response(404)
             self.end_headers()
@@ -247,9 +274,17 @@ class TelegramTradingBot:
         if reply_markup:
             payload["reply_markup"] = reply_markup
         try:
-            requests.post(url, json=payload, timeout=8)
+            resp = requests.post(url, json=payload, timeout=10)
+            if resp.status_code != 200:
+                log_debug(f"SendMessage error code={resp.status_code}: {resp.text}")
+                # Si falló (ej. error 400 por sintaxis Markdown), reenviar en texto plano
+                payload.pop("parse_mode", None)
+                resp2 = requests.post(url, json=payload, timeout=10)
+                log_debug(f"SendMessage retry plaintext status={resp2.status_code}")
+            else:
+                log_debug(f"SendMessage OK chat={chat_id}")
         except Exception as e:
-            print(f"{Fore.RED}[Telegram Error] {e}{Style.RESET_ALL}")
+            log_debug(f"SendMessage Exception: {e}")
 
     def send_photo(self, chat_id: int, photo_bytes, caption: str = "", reply_markup: Optional[Dict] = None):
         """Envía una imagen (gráfico) directamente al chat de Telegram."""
@@ -259,9 +294,18 @@ class TelegramTradingBot:
         if reply_markup:
             data["reply_markup"] = json.dumps(reply_markup)
         try:
-            requests.post(url, files=files, data=data, timeout=15)
+            resp = requests.post(url, files=files, data=data, timeout=15)
+            if resp.status_code != 200:
+                log_debug(f"SendPhoto error code={resp.status_code}: {resp.text}")
+                data.pop("parse_mode", None)
+                photo_bytes.seek(0)
+                files = {"photo": ("chart.png", photo_bytes, "image/png")}
+                resp2 = requests.post(url, files=files, data=data, timeout=15)
+                log_debug(f"SendPhoto retry status={resp2.status_code}")
+            else:
+                log_debug(f"SendPhoto OK chat={chat_id}")
         except Exception as e:
-            print(f"{Fore.RED}[Telegram Photo Error] {e}{Style.RESET_ALL}")
+            log_debug(f"SendPhoto Exception: {e}")
 
     def answer_callback_query(self, callback_query_id: str, text: str = ""):
         url = f"{self.base_url}/answerCallbackQuery"
@@ -301,7 +345,7 @@ class TelegramTradingBot:
         dca_badge = "Activado ✅" if self.risk_mgr.dca_enabled else "Desactivado ⚪"
         welcome_text = (
             f"👋 ¡Hola, *{user_first_name}*!\n\n"
-            f"Bienvenido a tu **Bot de Cripto Trading Pro**.\n\n"
+            f"Bienvenido a tu *Bot de Cripto Trading Pro*.\n\n"
             f"🌟 *Funciones Profesionales Activas:*\n"
             f"• 📊 *Estrategia:* `EMA 9/21 + RSI Filter`\n"
             f"• 📸 *Gráficos en Foto:* Velas japonesas en directo.\n"
@@ -864,80 +908,91 @@ class TelegramTradingBot:
     # ==================== RECEPCIÓN DE MENSAJES (LONG POLLING) ====================
 
     def process_update(self, update: Dict[str, Any]):
-        if "callback_query" in update:
-            cq = update["callback_query"]
-            cid = cq["message"]["chat"]["id"]
-            data = cq.get("data", "")
-            self.answer_callback_query(cq["id"], "Procesando...")
+        try:
+            if "callback_query" in update:
+                cq = update["callback_query"]
+                cid = cq["message"]["chat"]["id"]
+                data = cq.get("data", "")
+                self.answer_callback_query(cq["id"], "Procesando...")
 
-            if data == "refresh_status":
-                self.handle_status(cid)
-            elif data == "get_chart":
-                self.handle_chart(cid)
-            elif data == "force_sell":
-                self.handle_force_sell(cid)
-            elif data == "toggle_dca":
-                self.handle_toggle_dca(cid)
-            elif data == "do_restart":
-                self.handle_restart(cid)
-            elif data == "reset_balance":
-                self.handle_reset_balance(cid)
-            elif data.startswith("set_pair_"):
-                self.config.symbol = data.replace("set_pair_", "")
-                self.send_message(cid, f"✅ Par actualizado a *{self.config.symbol}*")
-            elif data.startswith("set_tf_"):
-                self.config.timeframe = data.replace("set_tf_", "")
-                self.send_message(cid, f"✅ Temporalidad actualizada a *{self.config.timeframe}*")
-            return
+                if data == "refresh_status":
+                    self.handle_status(cid)
+                elif data == "get_chart":
+                    self.handle_chart(cid)
+                elif data == "force_sell":
+                    self.handle_force_sell(cid)
+                elif data == "toggle_dca":
+                    self.handle_toggle_dca(cid)
+                elif data == "do_restart":
+                    self.handle_restart(cid)
+                elif data == "reset_balance":
+                    self.handle_reset_balance(cid)
+                elif data.startswith("set_pair_"):
+                    self.config.symbol = data.replace("set_pair_", "")
+                    self.send_message(cid, f"✅ Par actualizado a *{self.config.symbol}*")
+                elif data.startswith("set_tf_"):
+                    self.config.timeframe = data.replace("set_tf_", "")
+                    self.send_message(cid, f"✅ Temporalidad actualizada a *{self.config.timeframe}*")
+                return
 
-        if "message" in update and "text" in update["message"]:
-            msg = update["message"]
-            cid = msg["chat"]["id"]
-            text = msg["text"].strip()
-            first_name = msg.get("from", {}).get("first_name", "Amigo")
+            if "message" in update and "text" in update["message"]:
+                msg = update["message"]
+                cid = msg["chat"]["id"]
+                text = msg["text"].strip()
+                first_name = msg.get("from", {}).get("first_name", "Amigo")
+                log_debug(f"Comando recibido de {first_name} ({cid}): {text}")
 
-            if text == "/start" or text.startswith("/start"):
-                self.handle_start(cid, first_name)
-            elif text in ("📊 Mi Saldo & Estado", "/status", "/saldo"):
-                self.handle_status(cid)
-            elif text in ("📈 Precio & Señal", "/precio", "/signal"):
-                self.handle_price_and_signal(cid)
-            elif text in ("📸 Ver Gráfico en Foto", "/chart", "/grafico"):
-                self.handle_chart(cid)
-            elif text in ("🦅 Escáner Radar", "/radar", "/scan"):
-                self.handle_scanner(cid)
-            elif text in ("🧠 Miedo & Codicia", "/fng", "/sentimiento"):
-                self.handle_sentiment(cid)
-            elif text in ("☀️ Resumen Diario", "/reporte", "/digest"):
-                self.handle_daily_digest(cid)
-            elif text in ("🚀 Iniciar Trading", "/iniciar", "/start_trade"):
-                self.handle_start_trading(cid)
-            elif text in ("⏹️ Pausar Trading", "/pausar", "/stop_trade"):
-                self.handle_pause_trading(cid)
-            elif text in ("📜 Historial", "/historial"):
-                self.handle_history(cid)
-            elif text in ("🔄 Reiniciar Bot", "/restart", "/reiniciar"):
-                self.handle_restart(cid)
-            elif text in ("♻️ Restablecer Saldo", "/reset_balance"):
-                self.handle_reset_balance(cid)
-            elif text in ("⚙️ Ajustes", "/ajustes", "/config"):
-                self.handle_settings(cid)
-            elif text in ("🎓 Academia Web", "/academia", "/aprender", "/guia"):
-                self.handle_academia(cid)
-            elif text in ("❓ Ayuda", "/ayuda", "/help"):
-                help_text = (
-                    f"📖 *GUÍA COMPLETA DE COMANDOS PRO*\n\n"
-                    f"• *📊 Mi Saldo:* Muestra tus USDT y posición activa.\n"
-                    f"• *📸 Ver Gráfico:* Te envía una foto de velas japonesas y EMAs.\n"
-                    f"• *🦅 Escáner:* Revisa las 8 mejores criptos para encontrar compras.\n"
-                    f"• *🧠 Miedo & Codicia:* Consulta el termómetro general de mercado.\n"
-                    f"• *☀️ Resumen Diario:* Ganancias acumuladas de las últimas 24h.\n"
-                    f"• *🚀 Iniciar / ⏹️ Pausar:* Control del bot autónomo.\n"
-                    f"• *⚙️ Ajustes:* Cambia entre BTC, ETH, SOL o activa modo DCA."
-                )
-                self.send_message(cid, help_text)
-            else:
-                self.send_message(cid, f"🤖 No reconocí ese comando. Usa los botones táctiles abajo 👇", reply_markup=self.get_main_keyboard())
+                if text == "/start" or text.startswith("/start"):
+                    self.handle_start(cid, first_name)
+                elif text in ("📊 Mi Saldo & Estado", "/status", "/saldo"):
+                    self.handle_status(cid)
+                elif text in ("📈 Precio & Señal", "/precio", "/signal"):
+                    self.handle_price_and_signal(cid)
+                elif text in ("📸 Ver Gráfico en Foto", "/chart", "/grafico"):
+                    self.handle_chart(cid)
+                elif text in ("🦅 Escáner Radar", "/radar", "/scan"):
+                    self.handle_scanner(cid)
+                elif text in ("🧠 Miedo & Codicia", "/fng", "/sentimiento"):
+                    self.handle_sentiment(cid)
+                elif text in ("☀️ Resumen Diario", "/reporte", "/digest"):
+                    self.handle_daily_digest(cid)
+                elif text in ("🚀 Iniciar Trading", "/iniciar", "/start_trade"):
+                    self.handle_start_trading(cid)
+                elif text in ("⏹️ Pausar Trading", "/pausar", "/stop_trade"):
+                    self.handle_pause_trading(cid)
+                elif text in ("📜 Historial", "/historial"):
+                    self.handle_history(cid)
+                elif text in ("🔄 Reiniciar Bot", "/restart", "/reiniciar"):
+                    self.handle_restart(cid)
+                elif text in ("♻️ Restablecer Saldo", "/reset_balance"):
+                    self.handle_reset_balance(cid)
+                elif text in ("⚙️ Ajustes", "/ajustes", "/config"):
+                    self.handle_settings(cid)
+                elif text in ("🎓 Academia Web", "/academia", "/aprender", "/guia"):
+                    self.handle_academia(cid)
+                elif text in ("❓ Ayuda", "/ayuda", "/help"):
+                    help_text = (
+                        f"📖 *GUÍA COMPLETA DE COMANDOS PRO*\n\n"
+                        f"• *📊 Mi Saldo:* Muestra tus USDT y posición activa.\n"
+                        f"• *📸 Ver Gráfico:* Te envía una foto de velas japonesas y EMAs.\n"
+                        f"• *🦅 Escáner:* Revisa las 8 mejores criptos para encontrar compras.\n"
+                        f"• *🧠 Miedo & Codicia:* Consulta el termómetro general de mercado.\n"
+                        f"• *☀️ Resumen Diario:* Ganancias acumuladas de las últimas 24h.\n"
+                        f"• *🚀 Iniciar / ⏹️ Pausar:* Control del bot autónomo.\n"
+                        f"• *⚙️ Ajustes:* Cambia entre BTC, ETH, SOL o activa modo DCA."
+                    )
+                    self.send_message(cid, help_text)
+                else:
+                    self.send_message(cid, f"🤖 No reconocí ese comando. Usa los botones táctiles abajo 👇", reply_markup=self.get_main_keyboard())
+        except Exception as e:
+            log_debug(f"Error procesando update: {e}")
+            cid = None
+            if "message" in update:
+                cid = update["message"].get("chat", {}).get("id")
+            elif "callback_query" in update:
+                cid = update["callback_query"].get("message", {}).get("chat", {}).get("id")
+            if cid:
+                self.send_message(cid, f"⚠️ Error al procesar: {e}\nPor favor intenta nuevamente.")
 
     def run(self):
         """Inicia el bot en modo Webhook para la nube (Render 24/7) o Long-Polling para desarrollo local."""

@@ -42,9 +42,9 @@ class ExchangeClient:
             except Exception:
                 pass
 
-        # Clientes de respaldo automáticos (Bybit y Kraken no bloquean servidores en la nube)
+        # Clientes de respaldo automáticos (Kraken y Coinbase operan 100% legal en servidores de EE. UU. sin bloqueo)
         self.fallback_clients = []
-        for fb_id in ['bybit', 'kraken', 'kucoin']:
+        for fb_id in ['kraken', 'coinbase', 'bybit', 'kucoin']:
             if fb_id != self.exchange_id:
                 try:
                     fb_class = getattr(ccxt, fb_id, None)

@@ -59,16 +59,29 @@
     :root {
       color-scheme: dark;
     }
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 115px;
+      overflow-x: hidden !important;
+      max-width: 100vw;
+      width: 100%;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
     body {
       background-color: #030712;
       color: #f8fafc;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       -webkit-tap-highlight-color: transparent;
-      overflow-x: hidden;
+      overflow-x: hidden !important;
+      max-width: 100vw;
+      width: 100%;
+      position: relative;
     }
     .glass-nav {
-      background: rgba(8, 13, 26, 0.92);
+      background: rgba(8, 13, 26, 0.94);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -142,57 +155,59 @@
 </head>
 <body class="font-sans antialiased selection:bg-brand-cyan selection:text-dark-950">
 
-  <!-- TOP TICKER BAR (Adaptado a móviles con scroll horizontal suave) -->
-  <aside class="bg-dark-900 border-b border-white/5 py-1.5 px-3 sm:px-4 text-[11px] sm:text-xs font-mono text-gray-400 overflow-x-auto whitespace-nowrap">
-    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 sm:gap-6">
-      <div class="flex items-center gap-4 sm:gap-6">
-        <span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold shrink-0">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          NUBE 24/7 ACTIVA
-        </span>
-        <span class="flex items-center gap-1.5 shrink-0">
-          <span class="text-white font-semibold">BTC:</span>
-          <span id="ticker-btc" class="text-emerald-400 font-bold">$74,530</span>
-        </span>
-        <span class="flex items-center gap-1.5 shrink-0">
-          <span class="text-white font-semibold">ETH:</span>
-          <span id="ticker-eth" class="text-cyan-400 font-bold">$2,840</span>
-        </span>
-        <span class="flex items-center gap-1.5 shrink-0">
-          <span class="text-white font-semibold">SOL:</span>
-          <span id="ticker-sol" class="text-purple-400 font-bold">$188.50</span>
-        </span>
-      </div>
-      <div class="hidden md:flex items-center gap-3 text-gray-400 shrink-0">
-        <span>Estrategia: <strong class="text-emerald-400 font-bold">EMA 9/21 + RSI + EMA 200</strong></span>
-        <span>•</span>
-        <span class="text-cyan-300 font-medium">TradingJammer Bot</span>
+  <!-- HEADER FIJO PERMANENTE DURANTE EL SCROLL (SIN SCROLL HORIZONTAL) -->
+  <header id="main-header" class="fixed top-0 left-0 right-0 w-full z-50 glass-nav shadow-lg shadow-black/60 transition-all duration-300">
+    
+    <!-- Ticker de Monedas en Vivo (100% responsivo, sin desbordamiento horizontal) -->
+    <div class="bg-dark-950/90 border-b border-white/5 py-1 px-3 sm:px-6 text-[10px] sm:text-xs font-mono text-gray-400">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-hidden">
+        <div class="flex items-center gap-2.5 sm:gap-5 truncate">
+          <span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold shrink-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            24/7 NUBE ACTIVA
+          </span>
+          <span class="flex items-center gap-1 shrink-0">
+            <span class="text-white font-medium">BTC:</span>
+            <span id="ticker-btc" class="text-emerald-400 font-bold">$74,530</span>
+          </span>
+          <span class="flex items-center gap-1 shrink-0">
+            <span class="text-white font-medium">ETH:</span>
+            <span id="ticker-eth" class="text-cyan-400 font-bold">$2,840</span>
+          </span>
+          <span class="hidden sm:flex items-center gap-1 shrink-0">
+            <span class="text-white font-medium">SOL:</span>
+            <span id="ticker-sol" class="text-purple-400 font-bold">$188.50</span>
+          </span>
+        </div>
+        <div class="hidden md:flex items-center gap-2 text-gray-400 text-[11px] shrink-0">
+          <span>Estrategia: <strong class="text-emerald-400 font-medium">EMA 9/21 + RSI + EMA 200</strong></span>
+          <span>•</span>
+          <span class="text-cyan-300 font-medium">TradingJammer Bot</span>
+        </div>
       </div>
     </div>
-  </aside>
 
-  <!-- NAVBAR PRINCIPAL ADAPTADA A TODAS LAS PANTALLAS -->
-  <header class="sticky top-0 z-50 glass-nav">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+    <!-- Barra de Navegación Principal -->
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
       
       <!-- Logo y Título -->
-      <a href="#" class="flex items-center gap-2.5 sm:gap-3 group">
-        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-emerald-500 via-cyan-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition transform shrink-0">
-          <div class="w-full h-full bg-dark-950 rounded-[10px] flex items-center justify-center font-display font-black text-lg sm:text-xl text-white">
+      <a href="#" class="flex items-center gap-2 sm:gap-3 group shrink-0">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-cyan-500 to-purple-600 p-0.5 shadow-md shadow-cyan-500/20 group-hover:scale-105 transition transform shrink-0">
+          <div class="w-full h-full bg-dark-950 rounded-[10px] flex items-center justify-center font-display font-black text-base sm:text-lg text-white">
             TJ
           </div>
         </div>
         <div class="truncate">
           <div class="flex items-center gap-1.5 sm:gap-2">
-            <span class="font-display font-black text-base sm:text-xl tracking-tight text-white">TradingJammer</span>
+            <span class="font-display font-black text-sm sm:text-lg tracking-tight text-white">TradingJammer</span>
             <span class="bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Academia</span>
           </div>
-          <p class="text-[10px] sm:text-xs text-gray-400 hidden xs:block">Masterclass Cuantitativa 24/7</p>
+          <p class="text-[9px] sm:text-[11px] text-gray-400 hidden xs:block">Masterclass Cuantitativa 24/7</p>
         </div>
       </a>
 
       <!-- Menú Desktop / Tablet Grande (>= 1024px) -->
-      <nav class="hidden lg:flex items-center gap-5 xl:gap-7 text-xs xl:text-sm font-semibold text-gray-300">
+      <nav class="hidden lg:flex items-center gap-4 xl:gap-6 text-xs xl:text-sm font-semibold text-gray-300">
         <a href="#modulos" class="hover:text-brand-green transition flex items-center gap-1.5">
           <span>📚</span> Módulos
         </a>
@@ -214,20 +229,20 @@
       </nav>
 
       <!-- Botón Telegram & Botón Hamburguesa Móvil -->
-      <div class="flex items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
         <a href="https://t.me/TradingJammerBot" target="_blank" rel="noopener noreferrer"
-           class="inline-flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-dark-950 font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm transition transform hover:scale-105 shadow-md shadow-cyan-500/20 active:scale-95 shrink-0">
+           class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-dark-950 font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm transition transform hover:scale-105 shadow-md shadow-cyan-500/20 active:scale-95 shrink-0">
           <span>Bot Telegram</span>
           <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
         </a>
 
         <!-- Botón Hamburguesa (Móviles y Tablets) -->
         <button id="mobile-menu-btn" aria-label="Abrir Menú" onclick="toggleMobileMenu()"
-                class="lg:hidden p-2 rounded-xl bg-dark-850 hover:bg-dark-800 border border-white/10 text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400">
-          <svg id="hamburger-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="lg:hidden p-1.5 sm:p-2 rounded-xl bg-dark-850 hover:bg-dark-800 border border-white/10 text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+          <svg id="hamburger-icon" class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
-          <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg id="close-icon" class="w-5 h-5 sm:w-6 sm:h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -236,28 +251,28 @@
     </div>
 
     <!-- Menú Desplegable Móvil & Tablet -->
-    <div id="mobile-menu" class="hidden lg:hidden bg-dark-900/95 border-b border-white/10 px-4 pt-3 pb-6 transition-all duration-300">
-      <div class="space-y-2 text-sm font-semibold text-gray-200">
-        <a href="#modulos" onclick="closeMobileMenu()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
+    <div id="mobile-menu" class="hidden lg:hidden bg-dark-900/98 border-b border-white/10 px-4 pt-3 pb-5 transition-all duration-300 max-h-[80vh] overflow-y-auto">
+      <div class="space-y-1.5 text-sm font-semibold text-gray-200">
+        <a href="#modulos" onclick="closeMobileMenu()" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
           <span>📚</span> 6 Módulos de Aprendizaje
         </a>
-        <a href="#estrategia" onclick="closeMobileMenu()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
+        <a href="#estrategia" onclick="closeMobileMenu()" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
           <span>🧠</span> El Cerebro Algorítmico (EMA + RSI)
         </a>
-        <a href="#riesgo" onclick="closeMobileMenu()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
+        <a href="#riesgo" onclick="closeMobileMenu()" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
           <span>🛡️</span> Gestión de Riesgo & Break-Even
         </a>
-        <a href="#simulador" onclick="closeMobileMenu()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
+        <a href="#simulador" onclick="closeMobileMenu()" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
           <span>🧮</span> Simulador de Interés Compuesto
         </a>
-        <a href="#quiz" onclick="closeMobileMenu()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
+        <a href="#quiz" onclick="closeMobileMenu()" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
           <span>🏆</span> Examen de Certificación
         </a>
-        <a href="#manual" onclick="closeMobileMenu()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
+        <a href="#manual" onclick="closeMobileMenu()" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 active:bg-cyan-500/10">
           <span>📱</span> Manual de Botones Telegram
         </a>
       </div>
-      <div class="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-gray-400">
+      <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400">
         <span>Progreso del Curso:</span>
         <span id="mobile-progress-label" class="text-emerald-400 font-bold">15% completado</span>
       </div>
@@ -270,7 +285,7 @@
   </header>
 
   <!-- HERO SECTION TOTALMENTE RESPONSIVE -->
-  <section class="pt-12 sm:pt-20 pb-12 sm:pb-20 px-4 sm:px-6 relative overflow-hidden">
+  <section class="pt-28 sm:pt-36 pb-12 sm:pb-20 px-4 sm:px-6 relative overflow-hidden">
     <!-- Glows decorativos de fondo -->
     <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[320px] sm:w-[600px] h-[320px] sm:h-[600px] bg-gradient-to-b from-cyan-500/15 via-emerald-500/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
 

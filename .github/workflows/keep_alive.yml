@@ -1,0 +1,15 @@
+name: Keep Alive 24-7 Ping
+
+on:
+  schedule:
+    # Ejecuta cada 10 minutos para evitar que Render entre en reposo
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping_cloud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Web & Trading Engine
+        run: |
+          curl -s -f https://bot-trading-593w.onrender.com/ping || true

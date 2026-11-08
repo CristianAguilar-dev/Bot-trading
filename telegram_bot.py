@@ -29,37 +29,82 @@ from scanner import scan_multiple_cryptos
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "trading_state.json")
 
-def start_health_server():
-    """Servidor HTTP para servir la Academia de Trading y mantener el bot activo 24/7 en la nube."""
-    port = int(os.environ.get("PORT", "8080"))
-    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+class CloudServerHandler(http.server.BaseHTTPRequestHandler):
+    """Servidor HTTP de alto rendimiento: sirve la Academia Web, atiende pings 24/7 y procesa Webhooks de Telegram."""
+    bot_instance: Optional['TelegramTradingBot'] = None
 
-    class HealthHandler(http.server.SimpleHTTPRequestHandler):
-        def do_GET(self):
+    def do_GET(self):
+        # 1. Endpoint de ping / health check para monitoreo 24/7 sin suspensiones
+        if self.path in ("/ping", "/health", "/status-check"):
             self.send_response(200)
-            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.send_header("Content-type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            if os.path.exists(html_path):
-                with open(html_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                self.wfile.write(content.encode("utf-8"))
-            else:
-                html = (
-                    "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Trading Bot 24/7</title></head>"
-                    "<body style='font-family:sans-serif; text-align:center; padding-top:50px; background:#0f172a; color:#f8fafc;'>"
-                    "<h1>🟢 Bot de Trading Pro Operando 24/7 en la Nube</h1>"
-                    "<p>Academia Web, Gráficos, Escáner Radar, DCA y Sentimiento activos.</p>"
-                    "</body></html>"
-                )
-                self.wfile.write(html.encode("utf-8"))
-        def log_message(self, format, *args):
-            pass
+            is_active = self.bot_instance.is_trading_active if self.bot_instance else False
+            resp_data = {
+                "status": "online",
+                "service": "crypto_trading_bot_24_7",
+                "trading_active": is_active,
+                "timestamp": datetime.now().isoformat()
+            }
+            self.wfile.write(json.dumps(resp_data).encode("utf-8"))
+            return
+
+        # 2. Servir la Academia de Trading Web
+        html_path = os.path.join(os.path.dirname(__file__), "index.html")
+        self.send_response(200)
+        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.end_headers()
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.wfile.write(content.encode("utf-8"))
+        else:
+            html = (
+                "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Trading Bot 24/7</title></head>"
+                "<body style='font-family:sans-serif; text-align:center; padding-top:50px; background:#0f172a; color:#f8fafc;'>"
+                "<h1>🟢 Bot de Trading Pro Operando 24/7 en la Nube</h1>"
+                "<p>Academia Web, Gráficos, Escáner Radar, DCA y Sentimiento activos.</p>"
+                "</body></html>"
+            )
+            self.wfile.write(html.encode("utf-8"))
+
+    def do_POST(self):
+        # 3. Endpoint de Webhook para Telegram (hace que cada mensaje de Telegram opere directamente en Render)
+        if self.path in ("/webhook", "/telegram-webhook"):
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+
+                # Responder inmediatamente a Telegram 200 OK para evitar reintentos o timeouts
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"ok": true}')
+
+                if self.bot_instance and body:
+                    update_data = json.loads(body.decode("utf-8"))
+                    # Despachar procesamiento en un hilo independiente para velocidad máxima
+                    threading.Thread(target=self.bot_instance.process_update, args=(update_data,), daemon=True).start()
+            except Exception as e:
+                print(f"[Webhook Error] {e}")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format, *args):
+        pass
+
+def start_health_server(bot: 'TelegramTradingBot'):
+    """Inicia el servidor HTTP / Webhook en segundo plano."""
+    CloudServerHandler.bot_instance = bot
+    port = int(os.environ.get("PORT", "8080"))
 
     def run_server():
         try:
             socketserver.TCPServer.allow_reuse_address = True
-            with socketserver.TCPServer(("", port), HealthHandler) as httpd:
-                print(f"[NUBE] Servidor de salud activo en puerto {port}")
+            with socketserver.TCPServer(("", port), CloudServerHandler) as httpd:
+                print(f"[NUBE] Servidor Web y Webhook activo en puerto {port}")
                 httpd.serve_forever()
         except Exception as e:
             print(f"[NUBE Servidor] Error iniciando puerto {port}: {e}")
@@ -140,6 +185,12 @@ class TelegramTradingBot:
                         )
                     if "cooldown_until" in data:
                         self.risk_mgr.cooldown_until = float(data["cooldown_until"])
+                    if data.get("is_trading_active"):
+                        self.is_trading_active = True
+                        self.stop_signal.clear()
+                        self.trade_thread = threading.Thread(target=self._trading_loop, daemon=True)
+                        self.trade_thread.start()
+                        print(f"{Fore.GREEN}[TRADING 24/7] Reanudado automáticamente en la nube.{Style.RESET_ALL}")
                     print(f"{Fore.GREEN}[OK] Estado anterior cargado correctamente.{Style.RESET_ALL}")
             except Exception as e:
                 print(f"{Fore.RED}[WARN] No se pudo leer estado: {e}{Style.RESET_ALL}")
@@ -175,6 +226,7 @@ class TelegramTradingBot:
                 "paper_history": self.client.paper_history,
                 "dca_enabled": self.risk_mgr.dca_enabled,
                 "cooldown_until": self.risk_mgr.cooldown_until,
+                "is_trading_active": self.is_trading_active,
                 "active_position": pos_dict
             }
             with open(STATE_FILE, "w", encoding="utf-8") as f:
@@ -887,9 +939,43 @@ class TelegramTradingBot:
             else:
                 self.send_message(cid, f"🤖 No reconocí ese comando. Usa los botones táctiles abajo 👇", reply_markup=self.get_main_keyboard())
 
+    def run(self):
+        """Inicia el bot en modo Webhook para la nube (Render 24/7) o Long-Polling para desarrollo local."""
+        is_cloud = bool(os.environ.get("RENDER") or os.environ.get("PORT") or os.environ.get("RENDER_EXTERNAL_URL"))
+        cloud_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("WEBHOOK_URL") or "https://bot-trading-593w.onrender.com"
+
+        if is_cloud:
+            webhook_url = f"{cloud_url.rstrip('/')}/webhook"
+            print(f"\n{Fore.CYAN}===================================================================={Style.RESET_ALL}")
+            print(f"{Fore.GREEN}{Style.BRIGHT}     ☁️ TELEGRAM PRO NUBE: MODO WEBHOOK 24/7 OPERATIVO     {Style.RESET_ALL}")
+            print(f"  {Fore.WHITE}Receptor Webhook: {webhook_url}{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}===================================================================={Style.RESET_ALL}\n")
+            try:
+                set_hook = f"{self.base_url}/setWebhook?url={webhook_url}&drop_pending_updates=False"
+                resp = requests.get(set_hook, timeout=15)
+                res_data = resp.json()
+                if res_data.get("ok"):
+                    print(f"{Fore.GREEN}[OK] Webhook registrado exitosamente en Telegram.{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}[AVISO Webhook] {res_data}{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"{Fore.RED}[Error Webhook] {e}{Style.RESET_ALL}")
+
+            # En la nube, CloudServerHandler atiende todas las peticiones POST de Telegram en segundo plano.
+            # Mantenemos vivo el hilo principal sin gastar CPU.
+            while True:
+                time.sleep(3600)
+        else:
+            # Modo local en PC: eliminamos cualquier webhook previo para que getUpdates funcione
+            try:
+                requests.get(f"{self.base_url}/deleteWebhook", timeout=10)
+            except Exception:
+                pass
+            self.start_polling()
+
     def start_polling(self):
         print(f"\n{Fore.CYAN}===================================================================={Style.RESET_ALL}")
-        print(f"{Fore.GREEN}{Style.BRIGHT}     📱 TELEGRAM PRO CONTROLLER INICIADO (TODAS LAS MEJORAS)     {Style.RESET_ALL}")
+        print(f"{Fore.GREEN}{Style.BRIGHT}     📱 TELEGRAM PRO CONTROLLER INICIADO (MODO LOCAL)     {Style.RESET_ALL}")
         print(f"  {Fore.WHITE}Gráficos, Escáner Radar, DCA y Sentimiento 100% operativos.{Style.RESET_ALL}")
         print(f"{Fore.CYAN}===================================================================={Style.RESET_ALL}\n")
 
@@ -915,25 +1001,12 @@ class TelegramTradingBot:
                 time.sleep(2)
 
 def main():
-    start_health_server()
     config = BotConfig()
-    token = config.telegram_bot_token.strip()
+    token = config.telegram_bot_token.strip() or "9241639178:AAHPcbUfPkxhIsFwCjxe-ireM82NL8bjY2E"
     
-    if not token:
-        print(f"{Fore.YELLOW}No se encontró TELEGRAM_BOT_TOKEN en el archivo .env.{Style.RESET_ALL}")
-        token = input("Ingresa el Token de Telegram proporcionado por @BotFather: ").strip()
-        if not token:
-            print(f"{Fore.RED}Token no proporcionado. Saliendo...{Style.RESET_ALL}")
-            sys.exit(1)
-        env_path = os.path.join(os.path.dirname(__file__), ".env")
-        try:
-            with open(env_path, "a", encoding="utf-8") as f:
-                f.write(f"\nTELEGRAM_BOT_TOKEN={token}\n")
-        except Exception:
-            pass
-
     bot = TelegramTradingBot(token)
-    bot.start_polling()
+    start_health_server(bot)
+    bot.run()
 
 if __name__ == "__main__":
     main()

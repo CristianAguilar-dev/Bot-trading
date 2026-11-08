@@ -35,8 +35,8 @@ class BotConfig:
     initial_balance: float = float(os.getenv("INITIAL_BALANCE", "1000.0"))
     
     # Notificaciones Telegram
-    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "9241639178:AAHPcbUfPkxhIsFwCjxe-ireM82NL8bjY2E")
+    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "6902080959")
 
     def is_paper(self) -> bool:
         return self.bot_mode != "live"

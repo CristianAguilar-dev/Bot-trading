@@ -122,6 +122,23 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+def start_self_ping_loop():
+    """Bucle autónomo de auto-despertador interno: envía un ping HTTP público al propio servidor cada 4 minutos para evitar suspensión para siempre."""
+    def pinger():
+        time.sleep(25) # Esperar a que el servidor Web arranque
+        cloud_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("WEBHOOK_URL") or "https://bot-trading-593w.onrender.com"
+        target_ping = f"{cloud_url.rstrip('/')}/ping"
+        print(f"[KEEP-ALIVE 24/7] Auto-pinger interno activo hacia: {target_ping}")
+        while True:
+            try:
+                r = requests.get(target_ping, timeout=12)
+                log_debug(f"Auto-ping interno OK ({r.status_code})")
+            except Exception as e:
+                log_debug(f"Auto-ping interno fallo temporal: {e}")
+            time.sleep(240) # Cada 4 minutos exactos (Render duerme a los 15 min, así que nunca entra en reposo)
+
+    threading.Thread(target=pinger, daemon=True).start()
+
 def start_health_server(bot: 'TelegramTradingBot'):
     """Inicia el servidor HTTP / Webhook en segundo plano."""
     CloudServerHandler.bot_instance = bot
@@ -137,6 +154,7 @@ def start_health_server(bot: 'TelegramTradingBot'):
             print(f"[NUBE Servidor] Error iniciando puerto {port}: {e}")
 
     threading.Thread(target=run_server, daemon=True).start()
+    start_self_ping_loop()
 
 class TelegramTradingBot:
     def __init__(self, token: str):

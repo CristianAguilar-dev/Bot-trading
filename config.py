@@ -7,12 +7,12 @@ load_dotenv()
 
 @dataclass
 class BotConfig:
-    bot_mode: str = os.getenv("BOT_MODE", "paper").lower()
-    exchange_id: str = os.getenv("EXCHANGE_ID", "bybit").lower()
+    bot_mode: str = os.getenv("BOT_MODE", "live").lower()
+    exchange_id: str = os.getenv("EXCHANGE_ID", "binance").lower()
     use_testnet: bool = os.getenv("USE_TESTNET", "false").lower() in ("true", "1", "yes")
     
-    api_key: str = os.getenv("API_KEY", "")
-    api_secret: str = os.getenv("API_SECRET", "")
+    api_key: str = os.getenv("API_KEY", "UqIcLja2FrzfcpT8p8BlklOh0dBl2gWMc5mMOLW5VLOIgUWlOiSovHUIUCunskc7")
+    api_secret: str = os.getenv("API_SECRET", "TZgNm2ybFOU8oCDSf95ew63dKG28TgINyz2lHvzIp0hQZ0AabDkhCr2Wp3OD9E7I")
     
     symbol: str = os.getenv("SYMBOL", "BTC/USDT")
     timeframe: str = os.getenv("TIMEFRAME", "1h")

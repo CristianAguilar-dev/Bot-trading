@@ -64,8 +64,14 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
+            server_ip = "unknown"
+            try:
+                server_ip = requests.get("https://api.ipify.org", timeout=3).text.strip()
+            except Exception:
+                pass
             info = {
                 "server_time": datetime.now().isoformat(),
+                "server_outbound_ip": server_ip,
                 "trading_active": self.bot_instance.is_trading_active if self.bot_instance else False,
                 "symbol": self.bot_instance.config.symbol if self.bot_instance else "None",
                 "exchange": self.bot_instance.config.exchange_id if self.bot_instance else "None",

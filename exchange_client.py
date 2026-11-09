@@ -28,6 +28,10 @@ class ExchangeClient:
         config = {
             'enableRateLimit': True,
             'timeout': 15000,
+            'options': {
+                'fetchCurrencies': False,
+                'defaultType': 'spot'
+            }
         }
         if not self.paper_mode and self.api_key and self.api_secret:
             config['apiKey'] = self.api_key

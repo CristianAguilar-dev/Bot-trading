@@ -73,6 +73,8 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
                 "server_time": datetime.now().isoformat(),
                 "server_outbound_ip": server_ip,
                 "trading_active": self.bot_instance.is_trading_active if self.bot_instance else False,
+                "mode": "live" if (self.bot_instance and not self.bot_instance.client.paper_mode) else "paper",
+                "is_paper": self.bot_instance.client.paper_mode if self.bot_instance else True,
                 "symbol": self.bot_instance.config.symbol if self.bot_instance else "None",
                 "exchange": self.bot_instance.config.exchange_id if self.bot_instance else "None",
                 "chat_ids": list(self.bot_instance.authorized_chat_ids) if self.bot_instance else [],
@@ -197,12 +199,13 @@ class TelegramTradingBot:
         self.digest_thread: Optional[threading.Thread] = None
         self.stop_signal = threading.Event()
         
+        is_paper_mode = False if (self.config.api_key and self.config.api_secret and len(self.config.api_key) > 20) else self.config.is_paper()
         self.client = ExchangeClient(
             exchange_id=self.config.exchange_id,
             api_key=self.config.api_key,
             api_secret=self.config.api_secret,
             use_testnet=self.config.use_testnet,
-            paper_mode=self.config.is_paper(),
+            paper_mode=is_paper_mode,
             initial_balance=self.config.initial_balance
         )
         self.risk_mgr = RiskManager(
@@ -424,13 +427,15 @@ class TelegramTradingBot:
         in_cool, rem_mins = self.risk_mgr.is_in_cooldown()
         cool_text = f"\n• *Pausa Inteligente:* 🧘 Activa ({rem_mins} min restantes)" if in_cool else ""
 
+        mode_badge = "🟢 DINERO REAL (Binance)" if not self.client.paper_mode else "⚪ Simulación (Demo)"
         msg = [
             f"📊 *ESTADO GENERAL DEL BOT*",
             f"━━━━━━━━━━━━━━━━━━",
+            f"• *Modo:* `{mode_badge}`",
             f"• *Estado:* `{status_icon}`",
             f"• *Par Activo:* `{self.config.symbol}`",
             f"• *Precio:* `${price:,.2f} USD`",
-            f"• *Saldo USDT:* `${quote_bal:,.2f}`",
+            f"• *Saldo USDT Real:* `${quote_bal:,.2f}`",
             f"• *Saldo Crypto:* `{crypto_bal:.6f} {base_curr}`",
             f"• *Estrategia DCA:* {dca_badge}{cool_text}",
             f"━━━━━━━━━━━━━━━━━━"

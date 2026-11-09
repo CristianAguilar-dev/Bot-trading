@@ -39,6 +39,9 @@ class BotConfig:
     telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "6902080959")
 
     def is_paper(self) -> bool:
+        # Si tiene API Keys de Binance configuradas, opera siempre en VIVO con dinero real
+        if self.api_key and self.api_secret and len(self.api_key) > 20:
+            return False
         return self.bot_mode != "live"
 
     def has_telegram(self) -> bool:

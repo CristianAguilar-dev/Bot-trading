@@ -362,9 +362,10 @@ class TelegramTradingBot:
     # ==================== TECLADOS MÓVILES ====================
 
     def get_main_keyboard(self) -> Dict:
-        """Teclado táctil completo con todas las nuevas mejoras."""
+        """Teclado táctil completo con todas las nuevas mejoras y botón destacado de cómo ganar dinero real."""
         return {
             "keyboard": [
+                [{"text": "💰 ¿Cómo Ganar Dinero Real?"}],
                 [{"text": "📊 Mi Saldo & Estado"}, {"text": "📈 Precio & Señal"}],
                 [{"text": "📸 Ver Gráfico en Foto"}, {"text": "🦅 Escáner Radar"}],
                 [{"text": "🚀 Iniciar Trading"}, {"text": "⏹️ Pausar Trading"}],
@@ -388,6 +389,7 @@ class TelegramTradingBot:
             f"👋 ¡Hola, *{user_first_name}*!\n\n"
             f"Bienvenido a tu *Bot de Cripto Trading Pro*.\n\n"
             f"🌟 *Funciones Profesionales Activas:*\n"
+            f"• 💰 *¿Cómo Ganar Dinero Real?* Toca el botón dorado superior para la guía completa.\n"
             f"• 📊 *Estrategia:* `EMA 9/21 + RSI Filter`\n"
             f"• 📸 *Gráficos en Foto:* Velas japonesas en directo.\n"
             f"• 🦅 *Escáner Radar:* Rastrea las 8 mejores monedas.\n"
@@ -772,6 +774,49 @@ class TelegramTradingBot:
         markup = {"inline_keyboard": [[{"text": "🌐 Abrir Academia de Trading 🚀", "url": url}]]}
         self.send_message(chat_id, msg, reply_markup=markup)
 
+    def handle_ganar_dinero(self, chat_id: int):
+        """Guía completa y detallada de qué hace el bot y cómo ponerlo a operar para ganar dinero real."""
+        url = os.environ.get("RENDER_EXTERNAL_URL", "https://bot-trading-593w.onrender.com")
+        msg = (
+            "💰 *¿CÓMO FUNCIONA Y CÓMO GANAR DINERO REAL?*\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🤖 *1. ¿QUÉ HACE EXACTAMENTE EL BOT?*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "El bot es un software cuantitativo que opera 24/7 en la nube:\n"
+            "• 📡 *Vigila el mercado:* Analiza Bitcoin, Ethereum y Solana minuto a minuto sin emociones humanas.\n"
+            "• 🧠 *Aplica filtros matemáticos:* Cruce de EMAs (9 y 21), oscilador RSI y filtro institucional EMA 200.\n"
+            "• ⚖️ *Ratio 1:2.0:* Arriesga el -1.5% para ganar el +3.0%. Las ganancias siempre duplican las pérdidas.\n"
+            "• 🛡️ *Break-Even:* Al llegar al +1.2%, mueve el stop al precio de entrada asegurando $0 pérdidas.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🚀 *2. PASOS PARA OPERAR CON DINERO REAL*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Tu dinero *NUNCA* sale de tu poder ni se le entrega a nadie:\n\n"
+            "1️⃣ *Crea tu cuenta en un Exchange oficial:*\n"
+            "   Abre tu cuenta verificada en *Bybit* o *Binance* (gratis).\n\n"
+            "2️⃣ *Carga tus fondos en dólares USDT:*\n"
+            "   En Colombia se compra por *P2P* con *Nequi, Daviplata o Bancolombia* (desde $50.000 COP / $10 USD).\n\n"
+            "3️⃣ *Genera tus Llaves API Seguras:*\n"
+            "   En Bybit/Binance vas a `Perfil > Gestión de API > Crear API Key`.\n"
+            "   • Activas: Lectura y Trading Spot/Futuros.\n"
+            "   • ❌ *Retiros: DESMARCADO* (Garantía de que nadie puede retirar tu dinero).\n\n"
+            "4️⃣ *Conecta tus llaves al Bot en la Nube:*\n"
+            "   Se configuran tus llaves en las variables del servidor para que ejecute las órdenes de forma automática.\n\n"
+            "5️⃣ *Presiona '🚀 Iniciar Trading':*\n"
+            "   ¡Listo! El bot comenzará a buscar compras óptimas y te enviará un mensaje a este chat cada vez que abra un trade o genere ganancias en dólares reales.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "📈 *¿En cuánto tiempo crece el dinero?*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Gracias al *Interés Compuesto*, no se retira todo cada día: cada ganancia se suma a tu saldo para que las siguientes operaciones sean más grandes, logrando un crecimiento exponencial mes a mes."
+        )
+        markup = {
+            "inline_keyboard": [
+                [{"text": "🧮 Abrir Simulador de Ganancias", "url": f"{url}/#simulador"}],
+                [{"text": "📚 Ver Masterclass en la Academia", "url": f"{url}/#modulos"}],
+                [{"text": "🦅 Escanear Mercado en Vivo", "callback_data": "quick_scan"}]
+            ]
+        }
+        self.send_message(chat_id, msg, reply_markup=markup)
+
     def handle_force_sell(self, chat_id: int):
         if not self.risk_mgr.active_position:
             self.send_message(chat_id, "ℹ️ No hay ninguna posición abierta.")
@@ -959,6 +1004,8 @@ class TelegramTradingBot:
 
                 if data == "refresh_status":
                     self.handle_status(cid)
+                elif data == "quick_scan":
+                    self.handle_scanner(cid)
                 elif data == "get_chart":
                     self.handle_chart(cid)
                 elif data == "force_sell":
@@ -986,6 +1033,8 @@ class TelegramTradingBot:
 
                 if text == "/start" or text.startswith("/start"):
                     self.handle_start(cid, first_name)
+                elif text in ("💰 ¿Cómo Ganar Dinero Real?", "/ganar", "/dinero", "/real", "/operar_real"):
+                    self.handle_ganar_dinero(cid)
                 elif text in ("📊 Mi Saldo & Estado", "/status", "/saldo"):
                     self.handle_status(cid)
                 elif text in ("📈 Precio & Señal", "/precio", "/signal"):
@@ -1015,6 +1064,7 @@ class TelegramTradingBot:
                 elif text in ("❓ Ayuda", "/ayuda", "/help"):
                     help_text = (
                         f"📖 *GUÍA COMPLETA DE COMANDOS PRO*\n\n"
+                        f"• *💰 ¿Cómo Ganar Dinero Real?:* Guía de funcionamiento y conexión segura.\n"
                         f"• *📊 Mi Saldo:* Muestra tus USDT y posición activa.\n"
                         f"• *📸 Ver Gráfico:* Te envía una foto de velas japonesas y EMAs.\n"
                         f"• *🦅 Escáner:* Revisa las 8 mejores criptos para encontrar compras.\n"

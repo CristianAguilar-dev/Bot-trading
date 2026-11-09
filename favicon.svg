@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="tj-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="tj-glow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="1"/>
+    </linearGradient>
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded box -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#030712" stroke="url(#tj-grad)" stroke-width="2.5" />
+
+  <!-- Subtle trading grid line -->
+  <line x1="8" y1="46" x2="56" y2="46" stroke="#1e293b" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="8" y1="32" x2="56" y2="32" stroke="#1e293b" stroke-width="1" stroke-dasharray="2,2"/>
+
+  <!-- Candlesticks / Bullish Chart in background -->
+  <line x1="14" y1="36" x2="14" y2="48" stroke="#f43f5e" stroke-width="1.2" opacity="0.6"/>
+  <rect x="12" y="38" width="4" height="7" rx="1" fill="#f43f5e" opacity="0.6"/>
+
+  <line x1="22" y1="26" x2="22" y2="44" stroke="#10b981" stroke-width="1.2" opacity="0.8"/>
+  <rect x="20" y="28" width="4" height="12" rx="1" fill="#10b981" opacity="0.8"/>
+
+  <line x1="30" y1="16" x2="30" y2="38" stroke="#06b6d4" stroke-width="1.2" opacity="0.85"/>
+  <rect x="28" y="20" width="4" height="14" rx="1" fill="#06b6d4" opacity="0.85"/>
+
+  <!-- Glowing Trend Line -->
+  <polyline points="10,44 20,38 28,26 40,20 54,12" fill="none" stroke="url(#tj-glow)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#neon-glow)"/>
+
+  <!-- Target Point / Arrow -->
+  <circle cx="54" cy="12" r="3.5" fill="#10b981" filter="url(#neon-glow)"/>
+  <circle cx="54" cy="12" r="1.5" fill="#ffffff"/>
+
+  <!-- Badge TJ -->
+  <g transform="translate(13, 33)">
+    <rect x="0" y="0" width="38" height="21" rx="6" fill="#030712" fill-opacity="0.95" stroke="url(#tj-grad)" stroke-width="1.5"/>
+    <text x="19" y="15" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">TJ</text>
+  </g>
+</svg>

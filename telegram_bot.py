@@ -75,6 +75,29 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(info, indent=2).encode("utf-8"))
             return
 
+        # 1.2 Servir Favicons y recursos gráficos para la pestaña del navegador
+        static_files = {
+            "/favicon.ico": ("favicon.ico", "image/x-icon"),
+            "/favicon.png": ("favicon.png", "image/png"),
+            "/favicon-32.png": ("favicon-32.png", "image/png"),
+            "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+            "/apple-touch-icon.png": ("apple-touch-icon.png", "image/png"),
+            "/bot_avatar.jpg": ("bot_avatar.jpg", "image/jpeg"),
+        }
+        clean_path = self.path.split("?")[0]
+        if clean_path in static_files:
+            fname, ctype = static_files[clean_path]
+            fpath = os.path.join(os.path.dirname(__file__), fname)
+            if os.path.exists(fpath):
+                self.send_response(200)
+                self.send_header("Content-type", ctype)
+                self.send_header("Cache-Control", "public, max-age=86400")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                with open(fpath, "rb") as f:
+                    self.wfile.write(f.read())
+                return
+
         # 2. Servir la Academia de Trading Web
         html_path = os.path.join(os.path.dirname(__file__), "index.html")
         self.send_response(200)

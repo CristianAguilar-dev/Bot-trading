@@ -38,7 +38,9 @@ class ExchangeClient:
             config['secret'] = self.api_secret
 
         self.client = exchange_class(config)
-        # Desactivar explícitamente fetchCurrencies para evitar llamadas a /v5/asset/coin/query-info bloqueadas por CloudFront
+        # Usar el dominio alternativo oficial de Bybit (bytick.com) para evitar bloqueos CDN de CloudFront
+        if self.exchange_id == "bybit":
+            self.client.hostname = 'bytick.com'
         self.client.has['fetchCurrencies'] = False
 
         # En paper trading NUNCA activamos sandbox para evitar bloqueos por IP de Binance en servidores de la nube

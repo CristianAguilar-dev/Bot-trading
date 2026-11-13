@@ -59,7 +59,8 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
             return
 
         # 1.1 Endpoint de depuración en vivo para verificar recepción de eventos en la nube
-        if self.path in ("/debug", "/logs", "/status-details"):
+        clean_debug_path = self.path.split("?")[0]
+        if clean_debug_path in ("/debug", "/logs", "/status-details"):
             self.send_response(200)
             self.send_header("Content-type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -69,6 +70,13 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
                 server_ip = requests.get("https://api.ipify.org", timeout=3).text.strip()
             except Exception:
                 pass
+            exchange_check = None
+            if "check=1" in self.path and self.bot_instance:
+                try:
+                    bal = self.bot_instance.client.get_balances("BTC", "USDT")
+                    exchange_check = {"ok": True, "balances": bal}
+                except Exception as ex:
+                    exchange_check = {"ok": False, "error": str(ex)}
             info = {
                 "server_time": datetime.now().isoformat(),
                 "server_outbound_ip": server_ip,
@@ -80,6 +88,8 @@ class CloudServerHandler(http.server.BaseHTTPRequestHandler):
                 "chat_ids": list(self.bot_instance.authorized_chat_ids) if self.bot_instance else [],
                 "recent_logs": DEBUG_LOGS[-25:]
             }
+            if exchange_check is not None:
+                info["exchange_check"] = exchange_check
             self.wfile.write(json.dumps(info, indent=2).encode("utf-8"))
             return
 
@@ -199,7 +209,7 @@ class TelegramTradingBot:
         self.digest_thread: Optional[threading.Thread] = None
         self.stop_signal = threading.Event()
         
-        is_paper_mode = False if (self.config.api_key and self.config.api_secret and len(self.config.api_key) > 20) else self.config.is_paper()
+        is_paper_mode = False if (self.config.api_key and self.config.api_secret and len(self.config.api_key) >= 10) else self.config.is_paper()
         self.client = ExchangeClient(
             exchange_id=self.config.exchange_id,
             api_key=self.config.api_key,
@@ -427,7 +437,7 @@ class TelegramTradingBot:
         in_cool, rem_mins = self.risk_mgr.is_in_cooldown()
         cool_text = f"\n• *Pausa Inteligente:* 🧘 Activa ({rem_mins} min restantes)" if in_cool else ""
 
-        mode_badge = "🟢 DINERO REAL (Binance)" if not self.client.paper_mode else "⚪ Simulación (Demo)"
+        mode_badge = f"🟢 DINERO REAL ({self.config.exchange_id.upper()})" if not self.client.paper_mode else "⚪ Simulación (Demo)"
         msg = [
             f"📊 *ESTADO GENERAL DEL BOT*",
             f"━━━━━━━━━━━━━━━━━━",

@@ -8,11 +8,11 @@ load_dotenv()
 @dataclass
 class BotConfig:
     bot_mode: str = os.getenv("BOT_MODE", "live").lower()
-    exchange_id: str = os.getenv("EXCHANGE_ID", "binance").lower()
+    exchange_id: str = os.getenv("EXCHANGE_ID", "bybit").lower()
     use_testnet: bool = os.getenv("USE_TESTNET", "false").lower() in ("true", "1", "yes")
     
-    api_key: str = os.getenv("API_KEY", "UqIcLja2FrzfcpT8p8BlklOh0dBl2gWMc5mMOLW5VLOIgUWlOiSovHUIUCunskc7")
-    api_secret: str = os.getenv("API_SECRET", "TZgNm2ybFOU8oCDSf95ew63dKG28TgINyz2lHvzIp0hQZ0AabDkhCr2Wp3OD9E7I")
+    api_key: str = os.getenv("API_KEY", "tcjy8BUkSKyXrpJPuo")
+    api_secret: str = os.getenv("API_SECRET", "UIS9OJnjhF41qiicWaCgswbMHvWcXQFCRvXT")
     
     symbol: str = os.getenv("SYMBOL", "BTC/USDT")
     timeframe: str = os.getenv("TIMEFRAME", "1h")
@@ -39,8 +39,8 @@ class BotConfig:
     telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "6902080959")
 
     def is_paper(self) -> bool:
-        # Si tiene API Keys de Binance configuradas, opera siempre en VIVO con dinero real
-        if self.api_key and self.api_secret and len(self.api_key) > 20:
+        # Si tiene API Keys configuradas, opera siempre en VIVO con dinero real
+        if self.api_key and self.api_secret and len(self.api_key) >= 10:
             return False
         return self.bot_mode != "live"
 

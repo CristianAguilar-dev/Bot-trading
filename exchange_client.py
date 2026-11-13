@@ -38,6 +38,8 @@ class ExchangeClient:
             config['secret'] = self.api_secret
 
         self.client = exchange_class(config)
+        # Desactivar explícitamente fetchCurrencies para evitar llamadas a /v5/asset/coin/query-info bloqueadas por CloudFront
+        self.client.has['fetchCurrencies'] = False
 
         # En paper trading NUNCA activamos sandbox para evitar bloqueos por IP de Binance en servidores de la nube
         if not self.paper_mode and self.use_testnet and hasattr(self.client, 'set_sandbox_mode'):
@@ -118,9 +120,13 @@ class ExchangeClient:
             }
         else:
             balance = self.client.fetch_balance()
+            q_info = balance.get(quote_currency)
+            b_info = balance.get(base_currency)
+            q_val = float(q_info.get('free', 0.0)) if isinstance(q_info, dict) else float(balance.get('free', {}).get(quote_currency, 0.0) or 0.0)
+            b_val = float(b_info.get('free', 0.0)) if isinstance(b_info, dict) else float(balance.get('free', {}).get(base_currency, 0.0) or 0.0)
             return {
-                quote_currency: float(balance.get(quote_currency, {}).get('free', 0.0)),
-                base_currency: float(balance.get(base_currency, {}).get('free', 0.0))
+                quote_currency: q_val,
+                base_currency: b_val
             }
 
     def create_market_buy_order(self, symbol: str, amount: float, current_price: float) -> Dict[str, Any]:
